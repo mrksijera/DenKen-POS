@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -64,10 +66,7 @@ suspend fun fetchLocations(url: String): List<String> {
         .distinct()
 }
 
-/**
- * Shown on first launch (or whenever the app has no assigned location yet).
- * Blocks the rest of the app until a location is picked, same spirit as LoginScreen.
- */
+//Shown on first launch or appLocation == null, blocks the rest of the app until a location is picked.
 @Composable
 fun LocationSelectionScreen(
     onLocationSelected: (String) -> Unit,
@@ -102,7 +101,7 @@ fun LocationSelectionScreen(
             modifier = Modifier.fillMaxWidth(0.7f)
         ) {
             Text(
-                text = "Select this tablet's location",
+                text = stringResource(R.string.selectLocation),
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
@@ -119,7 +118,7 @@ fun LocationSelectionScreen(
 
                 hasError -> {
                     Text(
-                        text = "Couldn't load locations. Check your connection and try again.",
+                        text = stringResource(R.string.loadLocationFailedRetry),
                         color = colorResource(R.color.Cancel),
                         fontSize = 18.sp,
                         textAlign = TextAlign.Center
@@ -183,9 +182,9 @@ fun LocationPickerDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "Change Location",
+                        text = stringResource(R.string.changeLocation),
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
+                        fontSize = 26.sp,
                         modifier = Modifier.weight(1f)
                     )
 
@@ -196,15 +195,6 @@ fun LocationPickerDialog(
                             modifier = Modifier.size(28.dp)
                         )
                     }
-                }
-
-                if (currentLocation != null) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "Current: $currentLocation",
-                        fontSize = 14.sp,
-                        color = Color.DarkGray
-                    )
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -221,12 +211,12 @@ fun LocationPickerDialog(
 
                     hasError -> {
                         Text(
-                            text = "Couldn't load locations.",
+                            text = stringResource(R.string.loadLocationFailed),
                             color = colorResource(R.color.Cancel),
                             fontSize = 16.sp
                         )
                         Spacer(Modifier.height(8.dp))
-                        TextButton(onClick = { reloadKey++ }) { Text("Retry") }
+                        TextButton(onClick = { reloadKey++ }) { Text(stringResource(R.string.retry)) }
                     }
 
                     else -> {
@@ -263,21 +253,23 @@ private fun LocationRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(horizontal = 20.dp, vertical = 8.dp)
         ) {
             Text(
                 text = location,
                 fontSize = 22.sp,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                modifier = Modifier.weight(1f)
             )
 
             if (selected) {
+                Spacer(Modifier.width(8.dp))
+
                 Text(
-                    text = "Current",
-                    fontSize = 14.sp,
+                    text = "CURRENT",
+                    fontSize = 16.sp,
                     color = colorResource(R.color.Confirm),
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }

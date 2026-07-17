@@ -1,7 +1,6 @@
 package com.app.denkenpos
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -37,8 +36,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -62,8 +59,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.util.Locale
 import kotlinx.coroutines.delay
+import java.util.Locale
 import kotlin.time.Duration.Companion.milliseconds
 
 data class LastModifiedEvent(val productId: Int, val timeStamp: Long = System.currentTimeMillis())
@@ -149,35 +146,13 @@ class CartState {
         cartOrder.clear()
     }
 
-//    fun checkout(cashier: Cashier?): Transaction? {
-//        if (items.isEmpty()) return null
-//
-//        val transaction = Transaction(
-//            cashierId = cashier?.id ?: -1,
-//            cashierName = cashier?.name ?: "Unknown",
-//            items = items.map { cartItem ->
-//                TransactionItem(
-//                    productId = cartItem.product.id,
-//                    name = cartItem.product.name,
-//                    price = cartItem.product.price,
-//                    quantity = cartItem.quantity
-//                )
-//            },
-//            total = total
-//        )
-//
-//        clear()
-//
-//        return transaction
-//    }
-
-    fun buildTransaction(cashier: Cashier?): Transaction? {
+    fun buildTransaction(cashier: Cashier?, locationOverride: String? = null): Transaction? {
         if (items.isEmpty()) return null
 
         return Transaction(
             cashierId = cashier?.id ?: -1,
             cashierName = cashier?.name ?: "Unknown",
-            location = cashier?.location ?: "Unknown",
+            location = locationOverride?: cashier?.location ?: "Unknown",
             items = items.map { cartItem ->
                 TransactionItem(
                     productId = cartItem.product.id,
