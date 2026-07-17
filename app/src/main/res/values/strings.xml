@@ -10,7 +10,6 @@
     <string name="confirmTransaction">Confirm Transaction</string>
     <string name="transactionComplete">Transaction Complete</string>
     <string name="cartIsEmpty">Cart is Empty</string>
-    <string name="confirmLogout">Are you sure you want to log out?</string>
 
 <!--    ui text-->
     <string name="settings">Settings</string>
@@ -20,14 +19,23 @@
     <string name="no">No</string>
     <string name="confirm">OK</string>
     <string name="cancel">Cancel</string>
-    <string name="logout">Logout</string>
+    <string name="retry">Retry</string>
     <string name="loggedOut">Logged out</string>
     <string name="refreshProducts">Refresh Products</string>
     <string name="transactionHistory">Transaction History</string>
+    <string name="changeLocation">Change Location</string>
+    <string name="logout">Logout</string>
+
     <string name="addItemsPrompt">Add items to the cart before checking out.</string>
     <string name="emptyCashierList">Failed to fetch cashier list from database.</string>
     <string name="fetchingStaffData">Fetching staff data...</string>
+    <string name="selectLocation">Select this tablet\'s location</string>
     <string name="emptyTransactionHistory">Only transactions up to 3 days old are kept here.</string>
+    <string name="loadLocationFailed">Couldn\'t load locations.</string>
+    <string name="loadLocationFailedRetry">Couldn\'t load locations. Check your connection and try again.</string>
+    <string name="locationChanged">App location changed to </string>
+    <string name="transactionSynced">Transaction synced.</string>
+    <string name="confirmLogout">Are you sure you want to log out?</string>
 
 <!--    content description-->
     <string name="checkoutCart">Go to checkout</string>

@@ -1,7 +1,6 @@
 package com.app.denkenpos
 
 import android.content.Context
-import androidx.compose.ui.util.unpackInt1
 import androidx.core.content.edit
 
 // urls
@@ -80,6 +79,37 @@ fun setSalesLogUrl(context: Context, url: String) {
     context.getSharedPreferences("config", Context.MODE_PRIVATE)
         .edit { putString("sales_log_url", url) }
 }
+
+// location_sheet_url
+
+fun getLocationSheetUrl(context: Context): String {
+    val prefs = context.getSharedPreferences("config", Context.MODE_PRIVATE)
+    return prefs.getString("location_sheet_url", DEFAULT_LOCATION_SHEET_URL)!!
+}
+
+fun setLocationSheetUrl(context: Context, url: String) {
+    context.getSharedPreferences("config", Context.MODE_PRIVATE)
+        .edit { putString("location_sheet_url", url) }
+}
+
+// app_location — the physical store this tablet/install is assigned to.
+// Null means the app hasn't been assigned a location yet (first launch).
+
+fun getAppLocation(context: Context): String? {
+    val prefs = context.getSharedPreferences("config", Context.MODE_PRIVATE)
+    return prefs.getString("app_location", null)
+}
+
+fun setAppLocation(context: Context, location: String) {
+    context.getSharedPreferences("config", Context.MODE_PRIVATE)
+        .edit { putString("app_location", location) }
+}
+
+fun clearAppLocation(context: Context) {
+    context.getSharedPreferences("config", Context.MODE_PRIVATE)
+        .edit { remove("app_location") }
+}
+
 
 // sales_log_secret
 fun getSalesLogSecret(context: Context): String {

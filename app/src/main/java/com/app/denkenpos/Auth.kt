@@ -75,8 +75,7 @@ data class Cashier(
     val id: Int,
     val name: String,
     val location: String,
-    val pin: String,
-    val iconUrl: String? = null
+    val pin: String
 )
 
 val httpClient = HttpClient {
@@ -443,7 +442,7 @@ private object StaffColumns {
 }
 
 // Find index of the first header matching any of [names], else return -1.
-private fun List<String>.indexOfHeader(names: List<String>): Int {
+fun List<String>.indexOfHeader(names: List<String>): Int {
     return indexOfFirst { header -> names.any { it.equals(header.trim(), ignoreCase = true) } }
 }
 

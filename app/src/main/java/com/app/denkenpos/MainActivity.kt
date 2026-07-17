@@ -7,11 +7,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,11 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -58,9 +52,6 @@ class MainActivity : ComponentActivity() {
                      AppRoot(
                          modifier = Modifier.padding(innerPadding)
                      )
-//                    PosScreen(
-//                        products = sampleProducts(),
-//                        modifier = Modifier.padding(innerPadding))
                 }
             }
         }
@@ -75,27 +66,52 @@ class RootViewModel(application: Application): AndroidViewModel(application) {
         private set
 
     init {
+        val context = getApplication<Application>()
+        scheduleLogSync(context) // pick up anything left over from before a restart/kill
+
+        appLocation = getAppLocation(context)
+
+        // Only pull cashiers once we know which store this tablet belongs to.
+        // Until then, AppRoot shows the location picker instead of the login screen.
+        if (appLocation != null) {
+            loadCashiersForLocation()
+        }
+    }
+
+    // Called after the first-run picker or the admin "Change Location" dialog.
+    fun assignLocation(location: String) {
+        val context = getApplication<Application>()
+        setAppLocation(context, location)
+        appLocation = location
+        loadCashiersForLocation()
+    }
+
+    private fun loadCashiersForLocation() {
+        isLoading = true
+
         viewModelScope.launch {
             val context = getApplication<Application>()
-            scheduleLogSync(context) // pick up anything left over from before a restart/kill
+            val location = appLocation ?: run {
+                isLoading = false
+                return@launch
+            }
 
             val url = getStaffSheetUrl(context)
-            log("fetching staff data from: $url")
+            log("fetching staff data from: $url for location $location")
 
             var success = false
             var attempt = 0
             val maxAttempts = getStaffSheetMaxTries(context)
 
-            while(!success && attempt < maxAttempts) {
+            var fetched: List<Cashier> = emptyList()
+
+            while (!success && attempt < maxAttempts) {
                 attempt++
                 log("fetching cashiers attempt $attempt of $maxAttempts")
 
                 try {
                     log("fetching cashiers")
-                    val fresh = fetchCashiers(url)
-                    cashiers.clear()
-                    cashiers.addAll(fresh)
-                    saveCashiers(context, fresh)
+                    fetched = fetchCashiers(url)
                     success = true
                 } catch (_: Exception) {
                     log("attempt $attempt failed")
@@ -106,7 +122,17 @@ class RootViewModel(application: Application): AndroidViewModel(application) {
                 }
             }
 
-            if (cashiers.isEmpty()) {
+            cashiers.clear()
+
+            if (success) {
+                // Only cashiers+Admin assigned to this tablet's location.
+                val filtered = fetched.filter {
+                    it.location.equals(location, ignoreCase = true) || it.id == getAdminId(context)
+                }
+
+                cashiers.addAll(filtered)
+                saveCashiers(context, filtered)
+            } else {
                 val cached = loadCashiers(context)
                 cashiers.addAll(cached)
                 log("all attempts failed, fallback to cached data with ${cashiers.count()} accounts")
@@ -120,7 +146,6 @@ class RootViewModel(application: Application): AndroidViewModel(application) {
 @Composable
 fun AppRoot(modifier: Modifier = Modifier, viewModel: RootViewModel = viewModel()) {
     val context = LocalContext.current
-    val loggedOutMessage = stringResource(R.string.loggedOut)
 
     var currentCashierId by rememberSaveable { mutableStateOf<Int?>(null) }
     val currentCashier = viewModel.cashiers.find { it.id == currentCashierId }
@@ -138,9 +163,19 @@ fun AppRoot(modifier: Modifier = Modifier, viewModel: RootViewModel = viewModel(
         currentCashierId = null
     }
 
+    if (viewModel.appLocation == null) {
+        // first launch or location not assigned
+        LocationSelectionScreen(
+            onLocationSelected = { location -> viewModel.assignLocation(location) },
+            modifier = modifier
+        )
+
+        return
+    }
+
     if (currentCashier == null) {
         // login
-        log("login screen")
+        log("login screen for location ${viewModel.appLocation}")
         LoginScreen(
             cashiers = viewModel.cashiers,
             isLoading = viewModel.isLoading,
@@ -160,12 +195,20 @@ fun AppRoot(modifier: Modifier = Modifier, viewModel: RootViewModel = viewModel(
                     }
                 }
         ) {
+            val loggedOutMessage = stringResource(R.string.loggedOut)
+            val locationChangedMessage = stringResource(R.string.locationChanged)
+
             PosScreen(
                 products = sampleProducts(),
                 currentCashier = currentCashier,
+                appLocation = viewModel.appLocation,
                 onLogout = {
                     Toast.makeText(context, loggedOutMessage, Toast.LENGTH_SHORT).show()
                     currentCashierId = null
+                },
+                onChangeLocation = { newLocation ->
+                    Toast.makeText(context, "$locationChangedMessage $newLocation.", Toast.LENGTH_SHORT).show()
+                    viewModel.assignLocation(newLocation)
                 }
             )
         }

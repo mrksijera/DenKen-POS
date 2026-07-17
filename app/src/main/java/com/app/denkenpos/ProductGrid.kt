@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -93,7 +92,9 @@ fun buildCategoryIndexMap(gridItems: List<ProductGridItem>): Map<String, Int> {
 fun PosScreen(
     products: List<Product>,
     currentCashier: Cashier? = null,
+    appLocation: String? = null,
     onLogout: () -> Unit = {},
+    onChangeLocation: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -151,7 +152,9 @@ fun PosScreen(
                     currentCashier = currentCashier,
                     onLogout = onLogout,
                     onRefresh = { },
-                    onHistory = {}
+                    onHistory = { },
+                    currentLocation = appLocation,
+                    onChangeLocation = onChangeLocation
                 )
             }
 
@@ -179,7 +182,10 @@ fun PosScreen(
             onDecrease = cart::decrease,
             onEdit = cart::editQuantity,
             onClear = cart::clear,
-            onBuildTransaction = { cart.buildTransaction(currentCashier) },
+            onBuildTransaction = {
+                val isAdminCashier = currentCashier?.id == getAdminId(context)
+                cart.buildTransaction(currentCashier, locationOverride = if (isAdminCashier) appLocation else null)
+            },
             onConfirmTransaction = { transaction ->
                 cart.clear()
                 enqueueTransaction(context, transaction)
