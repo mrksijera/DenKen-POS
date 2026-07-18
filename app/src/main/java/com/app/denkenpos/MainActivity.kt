@@ -62,6 +62,10 @@ class RootViewModel(application: Application): AndroidViewModel(application) {
     val cashiers = mutableStateListOf<Cashier>()
     var isLoading by mutableStateOf(false)
 
+    val products = mutableStateListOf<Product>()
+    val categoryOrder = mutableStateListOf<String>()
+    var isLoadingProducts by mutableStateOf(false)
+
     var appLocation by mutableStateOf<String?>(null)
         private set
 
@@ -75,6 +79,68 @@ class RootViewModel(application: Application): AndroidViewModel(application) {
         // Until then, AppRoot shows the location picker instead of the login screen.
         if (appLocation != null) {
             loadCashiersForLocation()
+        }
+
+        // load product catalog
+        loadProductCatalog()
+    }
+
+    fun loadProductCatalog() {
+        isLoadingProducts = true
+
+        viewModelScope.launch {
+            val context = getApplication<Application>()
+
+            val productsUrl = getProductsSheetUrl(context)
+            val categoriesUrl = getCategoriesSheetUrl(context)
+            val maxAttempts = getProductsSheetMaxTries(context)
+
+            var fetchedProducts: List<Product>? = null
+            var attempt = 0
+
+            while (fetchedProducts == null && attempt < maxAttempts) {
+                attempt++
+                log("fetching products attempt $attempt of $maxAttempts")
+
+                fetchedProducts = try {
+                    fetchProducts(productsUrl)
+                } catch (_: Exception) {
+                    log("fetch products attempt $attempt failed")
+                    if (attempt < maxAttempts) delay(2000L.milliseconds)
+                    null
+                }
+                log("products fetched: ${fetchedProducts?.size}")
+            }
+
+            val fetchedCategories = try {
+                fetchCategories(categoriesUrl)
+            } catch (_: Exception) {
+                log("fetch categories failed")
+                null
+            }
+
+            if (!fetchedProducts.isNullOrEmpty()) {
+                products.clear()
+                products.addAll(fetchedProducts)
+                saveProducts(context, fetchedProducts)
+            } else {
+                val cached = loadProducts(context)
+                products.clear()
+                products.addAll(cached)
+                log("product fetch failed, fallback to cached data with ${products.count()} products")
+            }
+
+            if (!fetchedCategories.isNullOrEmpty()) {
+                categoryOrder.clear()
+                categoryOrder.addAll(fetchedCategories)
+                saveCategoryOrder(context, fetchedCategories)
+            } else {
+                val cachedCategories = loadCategoryOrder(context)
+                categoryOrder.clear()
+                categoryOrder.addAll(cachedCategories)
+            }
+
+            isLoadingProducts = false
         }
     }
 
@@ -199,7 +265,9 @@ fun AppRoot(modifier: Modifier = Modifier, viewModel: RootViewModel = viewModel(
             val locationChangedMessage = stringResource(R.string.locationChanged)
 
             PosScreen(
-                products = sampleProducts(),
+                products = viewModel.products,
+                categoryOrder = viewModel.categoryOrder,
+                isLoadingProducts = viewModel.isLoadingProducts,
                 currentCashier = currentCashier,
                 appLocation = viewModel.appLocation,
                 onLogout = {
@@ -209,72 +277,9 @@ fun AppRoot(modifier: Modifier = Modifier, viewModel: RootViewModel = viewModel(
                 onChangeLocation = { newLocation ->
                     Toast.makeText(context, "$locationChangedMessage $newLocation.", Toast.LENGTH_SHORT).show()
                     viewModel.assignLocation(newLocation)
-                }
+                },
+                onRefreshProducts = { viewModel.loadProductCatalog() }
             )
         }
     }
-}
-
-fun sampleProducts(): List<Product> {
-    return listOf(
-        Product("Coke", Random.Default.nextDouble(30.0, 60.0), "Drinks"),
-        Product("Pepsi", Random.Default.nextDouble(30.0, 60.0), "Drinks"),
-        Product("Sprite", Random.Default.nextDouble(30.0, 60.0), "Drinks"),
-        Product("Water", Random.Default.nextDouble(30.0, 60.0), "Drinks"),
-        Product("Mountain Dew", Random.Default.nextDouble(30.0, 60.0), "Drinks"),
-        Product("Dr. Pepper", Random.Default.nextDouble(30.0, 60.0), "Drinks"),
-        Product("Royal", Random.Default.nextDouble(30.0, 60.0), "Drinks"),
-        Product("Magnolia", Random.Default.nextDouble(30.0, 60.0), "Drinks"),
-        Product("Tang", Random.Default.nextDouble(30.0, 60.0), "Drinks"),
-        Product("Nestea Lemon", Random.Default.nextDouble(30.0, 60.0), "Drinks"),
-        Product("Chuckie", Random.Default.nextDouble(30.0, 60.0), "Drinks"),
-        Product("Drinks1", Random.Default.nextDouble(30.0, 60.0), "Drinks"),
-        Product("Drinks2", Random.Default.nextDouble(30.0, 60.0), "Drinks"),
-        Product("Drinks3", Random.Default.nextDouble(30.0, 60.0), "Drinks"),
-        Product("Drinks4", Random.Default.nextDouble(30.0, 60.0), "Drinks"),
-        Product("Drinks5", Random.Default.nextDouble(30.0, 60.0), "Drinks"),
-
-        Product("Chippy", Random.Default.nextDouble(15.0, 35.0), "Snacks"),
-        Product("Tattoos", Random.Default.nextDouble(15.0, 35.0), "Snacks"),
-        Product("Piattos", Random.Default.nextDouble(15.0, 35.0), "Snacks"),
-        Product("Ding Dong", Random.Default.nextDouble(15.0, 35.0), "Snacks"),
-        Product("Snickers", Random.Default.nextDouble(15.0, 35.0), "Snacks"),
-        Product("Boy Bawang", Random.Default.nextDouble(15.0, 35.0), "Snacks"),
-        Product("Esep Esep", Random.Default.nextDouble(15.0, 35.0), "Snacks"),
-        Product("Patatas", Random.Default.nextDouble(15.0, 35.0), "Snacks"),
-        Product("Snack1", Random.Default.nextDouble(15.0, 35.0), "Snacks"),
-        Product("Snack2", Random.Default.nextDouble(15.0, 35.0), "Snacks"),
-        Product("Snack3", Random.Default.nextDouble(15.0, 35.0), "Snacks"),
-        Product("Snack4", Random.Default.nextDouble(15.0, 35.0), "Snacks"),
-        Product("Snack5", Random.Default.nextDouble(15.0, 35.0), "Snacks"),
-        Product("Snack6", Random.Default.nextDouble(15.0, 35.0), "Snacks"),
-
-        Product("Corned Tuna", Random.Default.nextDouble(25.0, 70.0), "Canned"),
-        Product("Beef Loaf", Random.Default.nextDouble(25.0, 70.0), "Canned"),
-        Product("Corned Beef", Random.Default.nextDouble(25.0, 70.0), "Canned"),
-        Product("Sardines", Random.Default.nextDouble(25.0, 70.0), "Canned"),
-        Product("Meat Sauce", Random.Default.nextDouble(25.0, 70.0), "Canned"),
-        Product("Coconut Milk", Random.Default.nextDouble(25.0, 70.0), "Canned"),
-        Product("Evaporated Milk", Random.Default.nextDouble(25.0, 70.0), "Canned"),
-        Product("Condensed Milk", Random.Default.nextDouble(25.0, 70.0), "Canned"),
-        Product("Sausage", Random.Default.nextDouble(25.0, 70.0), "Canned"),
-        Product("Mushroom", Random.Default.nextDouble(25.0, 70.0), "Canned"),
-        Product("Canned1", Random.Default.nextDouble(25.0, 70.0), "Canned"),
-        Product("Canned2", Random.Default.nextDouble(25.0, 70.0), "Canned"),
-        Product("Canned3", Random.Default.nextDouble(25.0, 70.0), "Canned"),
-        Product("Canned4", Random.Default.nextDouble(25.0, 70.0), "Canned"),
-        Product("Canned5", Random.Default.nextDouble(25.0, 70.0), "Canned"),
-
-        Product("Pancit Canton", Random.Default.nextDouble(25.0, 100.0), "Noodles"),
-        Product("Cup Noodles", Random.Default.nextDouble(25.0, 100.0), "Noodles"),
-        Product("Mi Goreng", Random.Default.nextDouble(25.0, 100.0), "Noodles"),
-        Product("Cheese Ramen", Random.Default.nextDouble(25.0, 100.0), "Noodles"),
-        Product("Ramyeon", Random.Default.nextDouble(25.0, 100.0), "Noodles"),
-        Product("GenericNoodle1", Random.Default.nextDouble(25.0, 100.0), "Noodles"),
-        Product("GenericNoodle2", Random.Default.nextDouble(25.0, 100.0), "Noodles"),
-        Product("GenericNoodle3", Random.Default.nextDouble(25.0, 100.0), "Noodles"),
-        Product("GenericNoodle4", Random.Default.nextDouble(25.0, 100.0), "Noodles"),
-        Product("GenericNoodle5", Random.Default.nextDouble(25.0, 100.0), "Noodles"),
-        Product("Jjampong", Random.Default.nextDouble(25.0, 100.0), "Noodles")
-    )
 }

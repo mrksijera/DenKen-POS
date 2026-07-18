@@ -7,6 +7,9 @@ import androidx.core.content.edit
 const val DEFAULT_VALUES_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=1590247624&single=true&output=csv"
 const val DEFAULT_STAFF_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=332829102&single=true&output=csv"
 const val DEFAULT_LOCATION_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=892986798&single=true&output=csv"
+const val DEFAULT_CATEGORIES_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=1166628975&single=true&output=csv"
+const val DEFAULT_PRODUCTS_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=214184261&single=true&output=csv"
+const val DEFAULT_SALES_LOG_URL = "https://script.google.com/macros/s/AKfycbwkhV3HPu756UCYJZaNSzDpdB3q0OG9MzXDE9LgMCFSCZNqTO5DSQTa5RLEOnfBSKx9bA/exec" // your /exec deployment URL
 
 // admin id
 const val DEFAULT_ADMIN_ID: Int = -1
@@ -67,9 +70,41 @@ fun setStaffSheetMaxTries(context: Context, attempts: Int) {
         }
 }
 
-// sales_log_url
-const val DEFAULT_SALES_LOG_URL = "https://script.google.com/macros/s/AKfycbwkhV3HPu756UCYJZaNSzDpdB3q0OG9MzXDE9LgMCFSCZNqTO5DSQTa5RLEOnfBSKx9bA/exec" // your /exec deployment URL
+// products_sheet_url
+fun getProductsSheetUrl(context: Context): String {
+    val prefs = context.getSharedPreferences("config", Context.MODE_PRIVATE)
+    return prefs.getString("products_sheet_url", DEFAULT_PRODUCTS_SHEET_URL)!!
+}
 
+fun setProductsSheetUrl(context: Context, url: String) {
+    context.getSharedPreferences("config", Context.MODE_PRIVATE)
+        .edit { putString("products_sheet_url", url) }
+}
+
+const val DEFAULT_PRODUCTS_SHEET_MAX_TRIES: Int = 3
+
+fun getProductsSheetMaxTries(context: Context): Int {
+    val prefs = context.getSharedPreferences("config", Context.MODE_PRIVATE)
+    return prefs.getInt("products_sheet_url_max_tries", DEFAULT_PRODUCTS_SHEET_MAX_TRIES)
+}
+
+fun setProductsSheetMaxTries(context: Context, attempts: Int) {
+    context.getSharedPreferences("config", Context.MODE_PRIVATE)
+        .edit { putInt("products_sheet_url_max_tries", attempts) }
+}
+
+// categories_sheet_url
+fun getCategoriesSheetUrl(context: Context): String {
+    val prefs = context.getSharedPreferences("config", Context.MODE_PRIVATE)
+    return prefs.getString("categories_sheet_url", DEFAULT_CATEGORIES_SHEET_URL)!!
+}
+
+fun setCategoriesSheetUrl(context: Context, url: String) {
+    context.getSharedPreferences("config", Context.MODE_PRIVATE)
+        .edit { putString("categories_sheet_url", url) }
+}
+
+// sales_log_url
 fun getSalesLogUrl(context: Context): String {
     val prefs = context.getSharedPreferences("config", Context.MODE_PRIVATE)
     return prefs.getString("sales_log_url", DEFAULT_SALES_LOG_URL)!!

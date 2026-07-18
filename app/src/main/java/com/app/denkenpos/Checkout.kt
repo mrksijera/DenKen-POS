@@ -89,7 +89,7 @@ data class Transaction(
 )
 
 @Serializable
-private data class SalesLogItem(val name: String, val price: Double, val quantity: Int)
+private data class SalesLogItem(val productId: Int, val name: String, val price: Double, val quantity: Int)
 
 @Serializable
 private data class SalesLogPayload(
@@ -181,7 +181,7 @@ suspend fun sendTransactionToSheet(context: Context, transaction: Transaction): 
         cashierName = transaction.cashierName,
         location = transaction.location,
         timestamp = transaction.timestamp,
-        items = transaction.items.map { SalesLogItem(it.name, it.price, it.quantity) }
+        items = transaction.items.map { SalesLogItem(it.productId, it.name, it.price, it.quantity) }
     )
 
     return try {
@@ -190,18 +190,14 @@ suspend fun sendTransactionToSheet(context: Context, transaction: Transaction): 
             contentType(ContentType.Application.Json)
             setBody(payload)
             timeout {
-                // Apps Script can be slow (cold starts, LockService contention),
-                // give it more room than the client's default 5s so we don't
-                // treat a slow-but-successful write as a failure.
+                // give Apps Script more leeway to respond so slow-but-successful writes aren't considered a failure.
                 requestTimeoutMillis = 20000
             }
 
         }
 
-        // Apps Script Web Apps respond to POST with a 302 to a
-        // script.googleusercontent.com URL that actually serves the JSON body.
-        // The client doesn't auto-follow redirects for POST, so without this
-        // we'd treat a successful write as a failed "302 Found" response.
+        // Apps Script web apps respond to POST with a 302 to a script.googleusercontent.com URL that actually serves the JSON body.
+        // The client doesn't auto-follow redirects for POST, so without this we'd treat a successful write as a failed "302 Found" response.
         if (response.status.value in 300..399) {
             val location = response.headers[HttpHeaders.Location]
 

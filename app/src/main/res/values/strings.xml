@@ -29,6 +29,7 @@
     <string name="addItemsPrompt">Add items to the cart before checking out.</string>
     <string name="emptyCashierList">Failed to fetch cashier list from database.</string>
     <string name="fetchingStaffData">Fetching staff data...</string>
+    <string name="emptyProductList">Failed to fetch product list from database.</string>
     <string name="selectLocation">Select this tablet\'s location</string>
     <string name="emptyTransactionHistory">Only transactions up to 3 days old are kept here.</string>
     <string name="loadLocationFailed">Couldn\'t load locations.</string>

@@ -1,5 +1,6 @@
 package com.app.denkenpos
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -30,14 +32,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import java.util.Locale
 
 @Immutable
+@Serializable
 data class Product(
     val name: String,
     val price: Double,
@@ -61,14 +69,17 @@ object ProductIdGenerator{
 }
 
 // grid functions
-fun buildGridItems(products : List<Product>): List<ProductGridItem> {
+fun buildGridItems(products : List<Product>, categoryOrder: List<String> = emptyList()): List<ProductGridItem> {
     val grouped = products.groupBy { it.category }
     val result = mutableListOf<ProductGridItem>()
+    // Categories sheet order first, then any category present in the products but missing from the sheet (e.g. stale cache) tacked on at the end.
+    val orderedCategories = categoryOrder.filter { grouped.containsKey(it) } +
+            grouped.keys.filterNot { categoryOrder.contains(it) }
 
-    grouped.forEach { (category, items) ->
+    orderedCategories.forEach { category ->
         result.add(ProductGridItem.Header(category))
 
-        items.forEach {
+        grouped[category]?.forEach {
             result.add(ProductGridItem.ProductCard(it))
         }
     }
@@ -91,17 +102,22 @@ fun buildCategoryIndexMap(gridItems: List<ProductGridItem>): Map<String, Int> {
 @Composable
 fun PosScreen(
     products: List<Product>,
+    categoryOrder: List<String> = emptyList(),
+    isLoadingProducts: Boolean = false,
     currentCashier: Cashier? = null,
     appLocation: String? = null,
     onLogout: () -> Unit = {},
     onChangeLocation: (String) -> Unit = {},
+    onRefreshProducts: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
 
-    val gridItems = remember { buildGridItems(products) }
-    val categoryIndexMap = remember { buildCategoryIndexMap(gridItems) }
-    val categoryPositions = remember {
+    // products/categoryOrder now come from a live sheet fetch (with a refresh action),
+    // so the grid has to be rebuilt whenever they change instead of only once on first composition.
+    val gridItems = remember(products, categoryOrder) { buildGridItems(products, categoryOrder) }
+    val categoryIndexMap = remember(gridItems) { buildCategoryIndexMap(gridItems) }
+    val categoryPositions = remember(categoryIndexMap) {
         categoryIndexMap.entries.sortedBy { it.value }
     }
 
@@ -151,7 +167,7 @@ fun PosScreen(
                 PosMenuButton(
                     currentCashier = currentCashier,
                     onLogout = onLogout,
-                    onRefresh = { },
+                    onRefresh = onRefreshProducts,
                     onHistory = { },
                     currentLocation = appLocation,
                     onChangeLocation = onChangeLocation
@@ -160,13 +176,36 @@ fun PosScreen(
 
             HorizontalDivider()
 
-            ProductGrid(
-                gridItems = gridItems,
-                gridState = gridState,
-                modifier = Modifier
-                    .fillMaxHeight(),
-                onProductClick = { product -> cart.add(product) }
-            )
+            Box(modifier = Modifier.fillMaxHeight()) {
+                ProductGrid(
+                    gridItems = gridItems,
+                    gridState = gridState,
+                    modifier = Modifier.fillMaxSize(),
+                    onProductClick = { product -> cart.add(product) }
+                )
+
+                if (isLoadingProducts && products.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = Color(0xFF6C63FF))
+                    }
+                } else if (!isLoadingProducts && products.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.emptyProductList),
+                            fontSize = 20.sp,
+                            color = colorResource(R.color.slateGray),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+
         }
 
         VerticalDivider()
