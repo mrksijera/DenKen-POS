@@ -1,5 +1,6 @@
 package com.app.denkenpos
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -20,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -31,11 +33,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
@@ -43,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.util.Locale
@@ -140,16 +146,18 @@ fun PosScreen(
         }
     }
 
-    val cart = remember{ CartState() }
+    val cart: CartState = viewModel()
 
-    // layouts
-    Box(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxSize()
+    val configuration = LocalConfiguration.current
+    val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+
+    var showCartNotEmptyNotice by remember { mutableStateOf(false) }
+
+    val productSection: @Composable (Modifier) -> Unit = { sectionModifier ->
+        Column(
+            modifier = sectionModifier
         ) {
-            Column(
-                modifier = Modifier.weight(0.55f)
-            ) {
+            val headerRow: @Composable () -> Unit = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
@@ -171,17 +179,29 @@ fun PosScreen(
 
                     PosMenuButton(
                         currentCashier = currentCashier,
-                        onLogout = onLogout,
-                        onRefresh = onRefreshProducts,
+                        onLogout = {
+                            // clear cart on logout
+                            cart.clear()
+                            onLogout()
+                        },
+                        onRefresh = {
+                            if (cart.items.isEmpty()) {
+                                cart.clear()
+                                onRefreshProducts()
+                            } else {
+                                // block refresh while midsale
+                                showCartNotEmptyNotice = true
+                            }
+                        },
                         onHistory = { },
                         currentLocation = appLocation,
                         onChangeLocation = onChangeLocation
                     )
                 }
+            }
 
-                HorizontalDivider()
-
-                Box(modifier = Modifier.fillMaxHeight()) {
+            val gridBox: @Composable () -> Unit = {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     ProductGrid(
                         gridItems = gridItems,
                         gridState = gridState,
@@ -210,34 +230,65 @@ fun PosScreen(
                         }
                     }
                 }
-
             }
 
-            VerticalDivider()
+            if (isPortrait) {
+                gridBox()
+                HorizontalDivider()
+                headerRow()
+            } else {
+                headerRow()
+                HorizontalDivider()
+                gridBox()
+            }
+        }
+    }
 
-            CartPanel(
-                cartItems = cart.items,
-                lastModifiedEvent = cart.lastModifiedEvent,
-                total = cart.total,
-                modifier = Modifier
-                    .weight(0.45f)
-                    .padding(8.dp),
-                onIncrease = cart::increase,
-                onDecrease = cart::decrease,
-                onEdit = cart::editQuantity,
-                onClear = cart::clear,
-                onBuildTransaction = {
-                    val isAdminCashier = currentCashier?.id == getAdminId(context)
-                    cart.buildTransaction(
-                        currentCashier,
-                        locationOverride = if (isAdminCashier) appLocation else null
-                    )
-                },
-                onConfirmTransaction = { transaction ->
-                    cart.clear()
-                    enqueueTransaction(context, transaction)
-                }
-            )
+    // cart panel
+    val cartSection: @Composable (Modifier) -> Unit = { sectionModifier ->
+        CartPanel(
+            cartItems = cart.items,
+            lastModifiedEvent = cart.lastModifiedEvent,
+            total = cart.total,
+            modifier = sectionModifier.padding(8.dp),
+            onIncrease = cart::increase,
+            onDecrease = cart::decrease,
+            onEdit = cart::editQuantity,
+            onClear = cart::clear,
+            onBuildTransaction = {
+                val isAdminCashier = currentCashier?.id == getAdminId(context)
+                cart.buildTransaction(
+                    currentCashier,
+                    locationOverride = if (isAdminCashier) appLocation else null
+                )
+            },
+            onConfirmTransaction = { transaction ->
+                cart.clear()
+                enqueueTransaction(context, transaction)
+            }
+        )
+    }
+
+    // layouts
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (isPortrait) {
+            // product on top, cart on bottom
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                productSection(Modifier.weight(0.5f).fillMaxWidth())
+                HorizontalDivider()
+                cartSection(Modifier.weight(0.5f).fillMaxWidth())
+            }
+        } else {
+            // products on left, cart of right
+            Row(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                productSection(Modifier.weight(0.55f))
+                VerticalDivider()
+                cartSection(Modifier.weight(0.45f))
+            }
         }
 
         // block all touch while product refresh in progress
@@ -266,6 +317,25 @@ fun PosScreen(
                 cart.editingProductId = null
             },
             onDismiss = { cart.editingProductId = null}
+        )
+    }
+
+    if (showCartNotEmptyNotice) {
+        AlertDialog(
+            onDismissRequest = { showCartNotEmptyNotice = false },
+            title = { Text(stringResource(R.string.cartNotEmpty)) },
+            text = {
+                Text(
+                    text = stringResource(R.string.cartNotEmptyMessage),
+                    fontSize = 18.sp
+                )
+            },
+            confirmButton = {
+                ConfirmButton(
+                    onClick = { showCartNotEmptyNotice = false },
+                    modifier = Modifier.fillMaxWidth(0.3f)
+                ) { Text(stringResource(R.string.confirm), fontSize = 22.sp) }
+            }
         )
     }
 }

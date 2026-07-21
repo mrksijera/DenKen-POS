@@ -119,7 +119,7 @@ class RootViewModel(application: Application): AndroidViewModel(application) {
                 products.clear()
                 products.addAll(fetchedProducts)
                 saveProducts(context, fetchedProducts)
-                log("fetched ${fetchedProducts?.size} products from masterlist")
+                log("fetched ${fetchedProducts.size} products from masterlist")
             } else {
                 val cached = loadProducts(context)
                 products.clear()
@@ -131,6 +131,7 @@ class RootViewModel(application: Application): AndroidViewModel(application) {
                 categoryOrder.clear()
                 categoryOrder.addAll(fetchedCategories)
                 saveCategoryOrder(context, fetchedCategories)
+                log("fetched ${fetchedCategories.size} categories from masterlist")
             } else {
                 val cachedCategories = loadCategoryOrder(context)
                 categoryOrder.clear()
