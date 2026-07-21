@@ -2,8 +2,6 @@ package com.app.denkenpos
 
 import android.content.Context
 import androidx.core.content.edit
-import io.ktor.client.call.body
-import io.ktor.client.request.get
 
 private object ProductColumns {
     val ID = listOf("ID")
@@ -19,13 +17,12 @@ private object CategoryColumns {
 
 // ---- Fetching ----
 
-suspend fun fetchProducts(url: String): List<Product> {
-    val csv: String = httpClient.get(url).body()
+suspend fun fetchProducts(context: Context): List<Product> {
+    val table = fetchSheetTable(context, "products")
+    if (table.isEmpty()) return emptyList()
 
-    val lines = csv.lines().filter { it.isNotBlank() }
-    if (lines.isEmpty()) return emptyList()
-
-    val headers = lines.first().split(",")
+    val headers = table.first()
+    val rows = table.drop(1) // drop 1st row (headers)
 
     val idIndex = headers.indexOfHeader(ProductColumns.ID)
     val nameIndex = headers.indexOfHeader(ProductColumns.NAME)
@@ -41,21 +38,18 @@ suspend fun fetchProducts(url: String): List<Product> {
 
     val requiredCount = maxOf(idIndex, nameIndex, categoryIndex, priceIndex, activeIndex) + 1
 
-    return lines.drop(1).mapNotNull { line ->
-        val parts = line.split(",")
-
-        if (parts.size >= requiredCount) {
-            // Skip rows explicitly marked inactive; treat missing/unparseable
-            // Active column as active so the sheet works without it too.
+    return rows.mapNotNull { row ->
+        if (row.size >= requiredCount) {
+            // Skip rows explicitly marked inactive; treat missing/unparseable Active column as active so the sheet works without it too.
             val active = if (activeIndex == -1) true
-            else parts[activeIndex].trim().equals("Active", ignoreCase = true)
+            else row[activeIndex].trim().equals("Active", ignoreCase = true)
 
             if (!active) return@mapNotNull null
 
-            val id = parts[idIndex].trim().toDoubleOrNull()?.toInt() ?: return@mapNotNull null
-            val price = parts[priceIndex].trim().toDoubleOrNull() ?: return@mapNotNull null
-            val name = parts[nameIndex].trim()
-            val category = parts[categoryIndex].trim()
+            val id = row[idIndex].trim().toDoubleOrNull()?.toInt() ?: return@mapNotNull null
+            val price = row[priceIndex].trim().toDoubleOrNull() ?: return@mapNotNull null
+            val name = row[nameIndex].trim()
+            val category = row[categoryIndex].trim()
 
             if (name.isEmpty()) return@mapNotNull null
 
@@ -69,12 +63,12 @@ suspend fun fetchProducts(url: String): List<Product> {
     }
 }
 
-suspend fun fetchCategories(url: String): List<String> {
-    val csv: String = httpClient.get(url).body()
-    val lines = csv.lines().filter { it.isNotBlank() }
-    if (lines.isEmpty()) return emptyList()
+suspend fun fetchCategories(context: Context): List<String> {
+    val table = fetchSheetTable(context, "categories")
+    if (table.isEmpty()) return emptyList()
 
-    val headers = lines.first().split(",")
+    val headers = table.first()
+    val rows = table.drop(1) // drop 1st row (headers)
     val nameIndex = headers.indexOfHeader(CategoryColumns.NAME)
 
     if (nameIndex == -1) {
@@ -82,8 +76,7 @@ suspend fun fetchCategories(url: String): List<String> {
         return emptyList()
     }
 
-    return lines.drop(1)
-        .mapNotNull { line -> line.split(",").getOrNull(nameIndex)?.trim() }
+    return rows.mapNotNull { it.getOrNull(nameIndex)?.trim() }
         .filter { it.isNotEmpty() }
         .distinct()
 }

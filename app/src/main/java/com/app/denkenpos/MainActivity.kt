@@ -32,7 +32,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.denkenpos.ui.theme.DenKenPOSTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 
 class MainActivity : ComponentActivity() {
@@ -91,11 +90,9 @@ class RootViewModel(application: Application): AndroidViewModel(application) {
         viewModelScope.launch {
             val context = getApplication<Application>()
 
-            val productsUrl = getProductsSheetUrl(context)
-            val categoriesUrl = getCategoriesSheetUrl(context)
-            val maxAttempts = getProductsSheetMaxTries(context)
 
             var fetchedProducts: List<Product>? = null
+            val maxAttempts = getProductsSheetMaxTries(context)
             var attempt = 0
 
             while (fetchedProducts == null && attempt < maxAttempts) {
@@ -103,17 +100,16 @@ class RootViewModel(application: Application): AndroidViewModel(application) {
                 log("fetching products attempt $attempt of $maxAttempts")
 
                 fetchedProducts = try {
-                    fetchProducts(productsUrl)
+                    fetchProducts(context)
                 } catch (_: Exception) {
                     log("fetch products attempt $attempt failed")
                     if (attempt < maxAttempts) delay(2000L.milliseconds)
                     null
                 }
-                log("products fetched: ${fetchedProducts?.size}")
             }
 
             val fetchedCategories = try {
-                fetchCategories(categoriesUrl)
+                fetchCategories(context)
             } catch (_: Exception) {
                 log("fetch categories failed")
                 null
@@ -123,6 +119,7 @@ class RootViewModel(application: Application): AndroidViewModel(application) {
                 products.clear()
                 products.addAll(fetchedProducts)
                 saveProducts(context, fetchedProducts)
+                log("fetched ${fetchedProducts?.size} products from masterlist")
             } else {
                 val cached = loadProducts(context)
                 products.clear()
@@ -162,9 +159,6 @@ class RootViewModel(application: Application): AndroidViewModel(application) {
                 return@launch
             }
 
-            val url = getStaffSheetUrl(context)
-            log("fetching staff data from: $url for location $location")
-
             var success = false
             var attempt = 0
             val maxAttempts = getStaffSheetMaxTries(context)
@@ -177,7 +171,7 @@ class RootViewModel(application: Application): AndroidViewModel(application) {
 
                 try {
                     log("fetching cashiers")
-                    fetched = fetchCashiers(url)
+                    fetched = fetchCashiers(context)
                     success = true
                 } catch (_: Exception) {
                     log("attempt $attempt failed")
@@ -198,6 +192,7 @@ class RootViewModel(application: Application): AndroidViewModel(application) {
 
                 cashiers.addAll(filtered)
                 saveCashiers(context, filtered)
+                log("loaded ${cashiers.count()}  from database")
             } else {
                 val cached = loadCashiers(context)
                 cashiers.addAll(cached)

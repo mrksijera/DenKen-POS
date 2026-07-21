@@ -1,5 +1,8 @@
 package com.app.denkenpos
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -72,7 +75,8 @@ object ProductIdGenerator{
 fun buildGridItems(products : List<Product>, categoryOrder: List<String> = emptyList()): List<ProductGridItem> {
     val grouped = products.groupBy { it.category }
     val result = mutableListOf<ProductGridItem>()
-    // Categories sheet order first, then any category present in the products but missing from the sheet (e.g. stale cache) tacked on at the end.
+
+    // Categories sheet order first, then any category present in the products but missing from the sheet tacked on at the end.
     val orderedCategories = categoryOrder.filter { grouped.containsKey(it) } +
             grouped.keys.filterNot { categoryOrder.contains(it) }
 
@@ -115,7 +119,7 @@ fun PosScreen(
 
     // products/categoryOrder now come from a live sheet fetch (with a refresh action),
     // so the grid has to be rebuilt whenever they change instead of only once on first composition.
-    val gridItems = remember(products, categoryOrder) { buildGridItems(products, categoryOrder) }
+    val gridItems by remember { derivedStateOf { buildGridItems(products, categoryOrder) } }
     val categoryIndexMap = remember(gridItems) { buildCategoryIndexMap(gridItems) }
     val categoryPositions = remember(categoryIndexMap) {
         categoryIndexMap.entries.sortedBy { it.value }
@@ -139,97 +143,118 @@ fun PosScreen(
     val cart = remember{ CartState() }
 
     // layouts
-    Row(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Column(
-            modifier = Modifier.weight(0.55f)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxSize()
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier.weight(0.55f)
             ) {
-                CategoryRow(
-                    categories = categories,
-                    selectedCategory = currentCategory,
-                    onCategoryClick = { category ->
-                        val index = categoryIndexMap[category]
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    CategoryRow(
+                        categories = categories,
+                        selectedCategory = currentCategory,
+                        onCategoryClick = { category ->
+                            val index = categoryIndexMap[category]
 
-                        if (index != null) {
-                            scope.launch {
-                                gridState.animateScrollToItem(index)
+                            if (index != null) {
+                                scope.launch {
+                                    gridState.animateScrollToItem(index)
+                                }
                             }
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    PosMenuButton(
+                        currentCashier = currentCashier,
+                        onLogout = onLogout,
+                        onRefresh = onRefreshProducts,
+                        onHistory = { },
+                        currentLocation = appLocation,
+                        onChangeLocation = onChangeLocation
+                    )
+                }
+
+                HorizontalDivider()
+
+                Box(modifier = Modifier.fillMaxHeight()) {
+                    ProductGrid(
+                        gridItems = gridItems,
+                        gridState = gridState,
+                        modifier = Modifier.fillMaxSize(),
+                        onProductClick = { product -> cart.add(product) }
+                    )
+
+                    if (isLoadingProducts && products.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = Color(0xFF6C63FF))
                         }
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-
-                PosMenuButton(
-                    currentCashier = currentCashier,
-                    onLogout = onLogout,
-                    onRefresh = onRefreshProducts,
-                    onHistory = { },
-                    currentLocation = appLocation,
-                    onChangeLocation = onChangeLocation
-                )
-            }
-
-            HorizontalDivider()
-
-            Box(modifier = Modifier.fillMaxHeight()) {
-                ProductGrid(
-                    gridItems = gridItems,
-                    gridState = gridState,
-                    modifier = Modifier.fillMaxSize(),
-                    onProductClick = { product -> cart.add(product) }
-                )
-
-                if (isLoadingProducts && products.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = Color(0xFF6C63FF))
-                    }
-                } else if (!isLoadingProducts && products.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = stringResource(R.string.emptyProductList),
-                            fontSize = 20.sp,
-                            color = colorResource(R.color.slateGray),
-                            textAlign = TextAlign.Center
-                        )
+                    } else if (!isLoadingProducts && products.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.emptyProductList),
+                                fontSize = 20.sp,
+                                color = colorResource(R.color.slateGray),
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
                 }
+
             }
 
+            VerticalDivider()
+
+            CartPanel(
+                cartItems = cart.items,
+                lastModifiedEvent = cart.lastModifiedEvent,
+                total = cart.total,
+                modifier = Modifier
+                    .weight(0.45f)
+                    .padding(8.dp),
+                onIncrease = cart::increase,
+                onDecrease = cart::decrease,
+                onEdit = cart::editQuantity,
+                onClear = cart::clear,
+                onBuildTransaction = {
+                    val isAdminCashier = currentCashier?.id == getAdminId(context)
+                    cart.buildTransaction(
+                        currentCashier,
+                        locationOverride = if (isAdminCashier) appLocation else null
+                    )
+                },
+                onConfirmTransaction = { transaction ->
+                    cart.clear()
+                    enqueueTransaction(context, transaction)
+                }
+            )
         }
 
-        VerticalDivider()
-
-        CartPanel(
-            cartItems = cart.items,
-            lastModifiedEvent = cart.lastModifiedEvent,
-            total = cart.total,
-            modifier = Modifier
-                .weight(0.45f)
-                .padding(8.dp),
-            onIncrease = cart::increase,
-            onDecrease = cart::decrease,
-            onEdit = cart::editQuantity,
-            onClear = cart::clear,
-            onBuildTransaction = {
-                val isAdminCashier = currentCashier?.id == getAdminId(context)
-                cart.buildTransaction(currentCashier, locationOverride = if (isAdminCashier) appLocation else null)
-            },
-            onConfirmTransaction = { transaction ->
-                cart.clear()
-                enqueueTransaction(context, transaction)
+        // block all touch while product refresh in progress
+        if (isLoadingProducts) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.35f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { /* swallow input while refreshing */ },
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color.White)
             }
-        )
+        }
     }
 
     cart.editingProductId?.let { productId ->
@@ -336,6 +361,7 @@ fun ProductCard(
         ) {
             Text(
                 text = product.name,
+                fontWeight = FontWeight.Bold,
                 maxLines = 1
             )
             Spacer(modifier = Modifier.height(4.dp))

@@ -1,5 +1,6 @@
 package com.app.denkenpos
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,19 +41,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import io.ktor.client.call.body
-import io.ktor.client.request.get
 
 private object LocationSheetColumns {
     val NAME = listOf("Name")
 }
 
-suspend fun fetchLocations(url: String): List<String> {
-    val csv: String = httpClient.get(url).body()
-    val lines = csv.lines().filter { it.isNotBlank() }
-    if (lines.isEmpty()) return emptyList()
+suspend fun fetchLocations(context: Context): List<String> {
+    val table = fetchSheetTable(context, "locations")
+    if (table.isEmpty()) return emptyList()
 
-    val headers = lines.first().split(",")
+    val headers = table.first()
+    val rows = table.drop(1) // drop 1st row (headers)
     val nameIndex = headers.indexOfHeader(LocationSheetColumns.NAME)
 
     if (nameIndex == -1) {
@@ -60,8 +59,7 @@ suspend fun fetchLocations(url: String): List<String> {
         return emptyList()
     }
 
-    return lines.drop(1)
-        .mapNotNull { line -> line.split(",").getOrNull(nameIndex)?.trim() }
+    return rows.mapNotNull { it.getOrNull(nameIndex)?.trim() }
         .filter { it.isNotEmpty() }
         .distinct()
 }
@@ -82,7 +80,7 @@ fun LocationSelectionScreen(
         isLoading = true
         hasError = false
         locations = try {
-            fetchLocations(getLocationSheetUrl(context)).also { hasError = it.isEmpty() }
+            fetchLocations(context).also { hasError = it.isEmpty() }
         } catch (e: Exception) {
             hasError = true
             emptyList()
@@ -161,7 +159,7 @@ fun LocationPickerDialog(
         isLoading = true
         hasError = false
         locations = try {
-            fetchLocations(getLocationSheetUrl(context)).also { hasError = it.isEmpty() }
+            fetchLocations(context).also { hasError = it.isEmpty() }
         } catch (e: Exception) {
             hasError = true
             emptyList()
