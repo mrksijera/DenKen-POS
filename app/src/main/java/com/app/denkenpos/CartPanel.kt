@@ -1,5 +1,6 @@
 package com.app.denkenpos
 
+import android.content.res.Configuration
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -46,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -59,6 +61,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.delay
 import java.util.Locale
@@ -145,6 +148,7 @@ class CartState : ViewModel() {
     fun clear() {
         cart.clear()
         cartOrder.clear()
+        lastModifiedEvent = null
     }
 
     fun buildTransaction(cashier: Cashier?, locationOverride: String? = null): Transaction? {
@@ -190,8 +194,12 @@ fun CartPanel(
     var showEmptyCartNotice by remember { mutableStateOf(false) }
     var pendingTransaction by remember { mutableStateOf<Transaction?>(null) }
 
+    val configuration = LocalConfiguration.current
+    val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+
     LaunchedEffect(lastModifiedEvent?.productId) {
         val productId = lastModifiedEvent?.productId ?: return@LaunchedEffect
+        if (cartItems.isEmpty()) return@LaunchedEffect
 
         val index = cartItems.indexOfFirst { it.product.id == productId }
 
@@ -324,11 +332,12 @@ fun CartPanel(
     pendingTransaction?.let { transaction ->
         AlertDialog(
             onDismissRequest = { pendingTransaction = null }, // acts as "Back"
+            properties = DialogProperties(usePlatformDefaultWidth = false),
             title = { Text(
-                        stringResource(R.string.confirmTransaction),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    ) },
+                stringResource(R.string.confirmTransaction),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            ) },
             text = {
                 Column {
                     Text("Cashier: ${transaction.cashierName}", fontSize = 20.sp)
@@ -337,7 +346,9 @@ fun CartPanel(
                     Spacer(Modifier.height(8.dp))
 
                     LazyColumn(
-                        modifier = Modifier.heightIn(max = 360.dp) // 3
+                        // More vertical room is available in portrait, so let the item list use it
+                        // instead of staying capped at a landscape-sized 360dp.
+                        modifier = Modifier.heightIn(max = if (isPortrait) (configuration.screenHeightDp * 0.4f).dp else 360.dp)
                     ) {
                         items(transaction.items, key = { it.productId }) { item ->
                             Row(
@@ -388,19 +399,19 @@ fun CartPanel(
                         onConfirmTransaction(transaction)
                         pendingTransaction = null
                     },
-                    modifier = Modifier.fillMaxWidth(0.3f)
+                    modifier = Modifier.fillMaxWidth(if (isPortrait) 0.4f else 0.3f)
                 ) { Text(stringResource(R.string.confirm), fontSize = 26.sp) }
             },
             dismissButton = {
                 CancelButton(
                     onClick = { pendingTransaction = null },
-                    modifier = Modifier.fillMaxWidth(0.3f)
+                    modifier = Modifier.fillMaxWidth(if (isPortrait) 0.4f else 0.3f)
                 ) { Text(stringResource(R.string.cancel), fontSize = 26.sp) }
             },
             shape = RoundedCornerShape(8.dp),
             modifier = Modifier
                 .padding(vertical = 10.dp)
-                .wrapContentWidth()
+                .fillMaxWidth(if (isPortrait) 0.92f else 0.55f)
                 .wrapContentHeight()
         )
     }
