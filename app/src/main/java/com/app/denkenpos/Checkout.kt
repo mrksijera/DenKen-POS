@@ -1,6 +1,7 @@
 package com.app.denkenpos
 
 import android.content.Context
+import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -38,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.edit
 import androidx.work.BackoffPolicy
@@ -105,7 +108,7 @@ private data class SalesLogPayload(
 @Serializable
 private data class SalesLogResponse(val success: Boolean, val status: String? = null, val error: String? = null)
 
-// ---- Queue persistence (mirrors saveCashiers/loadCashiers in Auth.kt) ----
+// Queue persistence (mirrors saveCashiers/loadCashiers in Auth.kt)
 
 enum class TransactionStatus { PENDING, SENT, FAILED }
 
@@ -165,8 +168,7 @@ fun retryTransaction(context: Context, transactionId: String) {
     scheduleLogSync(context)
 }
 
-// ---- Sending (stub — swap once the write endpoint is decided) ----
-
+// Sending
 suspend fun sendTransactionToSheet(context: Context, transaction: Transaction): Boolean {
     val url = getSalesLogUrl(context)
     if (url.isBlank()) {
@@ -196,8 +198,7 @@ suspend fun sendTransactionToSheet(context: Context, transaction: Transaction): 
 
         }
 
-        // Apps Script web apps respond to POST with a 302 to a script.googleusercontent.com URL that actually serves the JSON body.
-        // The client doesn't auto-follow redirects for POST, so without this we'd treat a successful write as a failed "302 Found" response.
+        // if POST response is 302, follow redirect to get the response
         if (response.status.value in 300..399) {
             val location = response.headers[HttpHeaders.Location]
 
@@ -235,8 +236,7 @@ suspend fun sendTransactionToSheet(context: Context, transaction: Transaction): 
     }
 }
 
-// ---- WorkManager plumbing ----
-
+// WorkManager
 private const val SYNC_WORK_NAME = "transaction_log_sync"
 
 fun scheduleLogSync(context: Context) {
@@ -250,12 +250,6 @@ fun scheduleLogSync(context: Context) {
         .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
         .build()
 
-    // KEEP: if a sync attempt is already queued/running, don't stack another
-//    WorkManager.getInstance(context).enqueueUniqueWork(
-//        SYNC_WORK_NAME,
-//        ExistingWorkPolicy.KEEP,
-//        request
-//    )
     WorkManager.getInstance(context).enqueueUniqueWork(
         SYNC_WORK_NAME,
         ExistingWorkPolicy.REPLACE,
@@ -325,6 +319,9 @@ fun TransactionHistoryDialog(
     var records by remember { mutableStateOf(loadTransactionHistory(context).sortedByDescending { it.transaction.timestamp }) }
     var expandedIds by remember { mutableStateOf(setOf<String>()) }
 
+    val configuration = LocalConfiguration.current
+    val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+
     // poll for status change
     LaunchedEffect(Unit) {
         while(true) {
@@ -333,12 +330,16 @@ fun TransactionHistoryDialog(
         }
     }
 
-    Dialog(onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        // manual control of width instead of the platform default cap
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Card(
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier
-                .fillMaxWidth(1f)
-                .heightIn(max = 700.dp)
+                .fillMaxWidth(if (isPortrait) 0.95f else 0.7f)
+                .heightIn(max = if (isPortrait) (configuration.screenHeightDp * 0.85f).dp else 700.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
@@ -387,9 +388,10 @@ fun TransactionHistoryDialog(
                         TransactionHistoryRow(
                             record = record,
                             expanded = expandedIds.contains(id),
+                            isPortrait = isPortrait,
                             onToggleExpand = {
                                 expandedIds = if (expandedIds.contains(id))
-                                        expandedIds - id
+                                    expandedIds - id
                                 else
                                     expandedIds + id
                             },
@@ -412,6 +414,7 @@ private val historyTimestampFormat = SimpleDateFormat("MMM d, h:mm a", Locale.ge
 fun TransactionHistoryRow(
     record: TransactionRecord,
     expanded: Boolean,
+    isPortrait: Boolean,
     onToggleExpand: () -> Unit,
     onRetry: () -> Unit
 ) {
@@ -426,63 +429,120 @@ fun TransactionHistoryRow(
             .clickable { onToggleExpand() }
             .padding(vertical = 8.dp)
     ) {
-        // top line: expand icon | timestamp | cashier | total | status
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = if (expanded) ImageVector.vectorResource(R.drawable.keyboard_arrow_up) else ImageVector.vectorResource(R.drawable.keyboard_arrow_down),
-                contentDescription = if (expanded) "Collapse" else "Expand",
-                modifier = Modifier.size(24.dp)
-            )
+        if (isPortrait) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = if (expanded) ImageVector.vectorResource(R.drawable.keyboard_arrow_up) else ImageVector.vectorResource(R.drawable.keyboard_arrow_down),
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    modifier = Modifier.size(24.dp)
+                )
 
-            Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.width(4.dp))
 
-            Text(
-                text = timestampText,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
+                Text(
+                    text = timestampText,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f)
+                )
 
-            Spacer(Modifier.width(4.dp))
+                Text(
+                    text = String.format(Locale.getDefault(), "${stringResource(R.string.currency)} %.2f", transaction.total),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.End
+                )
+            }
 
-            Text(
-                text = "by ${transaction.cashierName}",
-                fontSize = 16.sp,
-                color = Color.Black,
-                textAlign = TextAlign.Start,
-                maxLines = 1,
-                modifier = Modifier.weight(0.9f)
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 28.dp, top = 2.dp)
+            ) {
+                Text(
+                    text = "by ${transaction.cashierName}",
+                    fontSize = 14.sp,
+                    color = Color.Black,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f)
+                )
 
-            Text(
-                text = String.format(Locale.getDefault(), "${stringResource(R.string.currency)} %.2f", transaction.total),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.End
-            )
-        }
+                if (record.status == TransactionStatus.FAILED) {
+                    StatusBadge(onClick = onRetry, record.status)
+                } else {
+                    StatusBadge(onClick = { }, record.status)
+                }
+            }
 
-        // transaction ID + status badge
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
             Text(
                 text = transaction.id,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 color = Color.DarkGray,
-                modifier = Modifier
-                    .padding(start = 24.dp, top = 2.dp)
-                    .weight(1f)
+                modifier = Modifier.padding(start = 28.dp, top = 2.dp)
             )
+        } else {
+            // top line: expand icon | timestamp | cashier | total | status
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = if (expanded) ImageVector.vectorResource(R.drawable.keyboard_arrow_up) else ImageVector.vectorResource(R.drawable.keyboard_arrow_down),
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    modifier = Modifier.size(24.dp)
+                )
 
-            // status badge
-            if (record.status == TransactionStatus.FAILED) {
-                StatusBadge(onClick = onRetry, record.status)
-            } else {
-                StatusBadge(onClick = { }, record.status)
+                Spacer(Modifier.width(4.dp))
+
+                Text(
+                    text = timestampText,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+
+                Spacer(Modifier.width(4.dp))
+
+                Text(
+                    text = "by ${transaction.cashierName}",
+                    fontSize = 16.sp,
+                    color = Color.Black,
+                    textAlign = TextAlign.Start,
+                    maxLines = 1,
+                    modifier = Modifier.weight(0.9f)
+                )
+
+                Text(
+                    text = String.format(Locale.getDefault(), "${stringResource(R.string.currency)} %.2f", transaction.total),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.End
+                )
+            }
+
+            // transaction ID + status badge
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = transaction.id,
+                    fontSize = 12.sp,
+                    color = Color.DarkGray,
+                    modifier = Modifier
+                        .padding(start = 24.dp, top = 2.dp)
+                        .weight(1f)
+                )
+
+                // status badge
+                if (record.status == TransactionStatus.FAILED) {
+                    StatusBadge(onClick = onRetry, record.status)
+                } else {
+                    StatusBadge(onClick = { }, record.status)
+                }
             }
         }
 
