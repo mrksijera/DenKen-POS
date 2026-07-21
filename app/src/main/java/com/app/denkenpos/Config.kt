@@ -4,11 +4,11 @@ import android.content.Context
 import androidx.core.content.edit
 
 // urls
-const val DEFAULT_VALUES_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=1590247624&single=true&output=csv"
-const val DEFAULT_STAFF_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=332829102&single=true&output=csv"
-const val DEFAULT_LOCATION_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=892986798&single=true&output=csv"
-const val DEFAULT_CATEGORIES_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=1166628975&single=true&output=csv"
-const val DEFAULT_PRODUCTS_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=214184261&single=true&output=csv"
+//const val DEFAULT_VALUES_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=1590247624&single=true&output=csv"
+//const val DEFAULT_STAFF_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=332829102&single=true&output=csv"
+//const val DEFAULT_LOCATION_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=892986798&single=true&output=csv"
+//const val DEFAULT_CATEGORIES_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=1166628975&single=true&output=csv"
+//const val DEFAULT_PRODUCTS_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=214184261&single=true&output=csv"
 const val DEFAULT_SALES_LOG_URL = "https://script.google.com/macros/s/AKfycbwkhV3HPu756UCYJZaNSzDpdB3q0OG9MzXDE9LgMCFSCZNqTO5DSQTa5RLEOnfBSKx9bA/exec" // your /exec deployment URL
 
 // admin id
@@ -42,18 +42,17 @@ fun setTimeoutMinutes(context: Context, timeoutMinutes: Long) {
 }
 
 // staff_sheet_url
-
-fun getStaffSheetUrl(context: Context): String {
-    val prefs = context.getSharedPreferences("config", Context.MODE_PRIVATE)
-    return prefs.getString("staff_sheet_url", DEFAULT_STAFF_SHEET_URL)!!
-}
-
-fun setStaffSheetUrl(context: Context, url: String) {
-    context.getSharedPreferences("config", Context.MODE_PRIVATE)
-        .edit{
-            putString("staff_sheet_url", url)
-        }
-}
+//fun getStaffSheetUrl(context: Context): String {
+//    val prefs = context.getSharedPreferences("config", Context.MODE_PRIVATE)
+//    return prefs.getString("staff_sheet_url", DEFAULT_STAFF_SHEET_URL)!!
+//}
+//
+//fun setStaffSheetUrl(context: Context, url: String) {
+//    context.getSharedPreferences("config", Context.MODE_PRIVATE)
+//        .edit{
+//            putString("staff_sheet_url", url)
+//        }
+//}
 
 // staff_sheet_url
 const val DEFAULT_STAFF_SHEET_MAX_TRIES: Int = 3
@@ -71,15 +70,15 @@ fun setStaffSheetMaxTries(context: Context, attempts: Int) {
 }
 
 // products_sheet_url
-fun getProductsSheetUrl(context: Context): String {
-    val prefs = context.getSharedPreferences("config", Context.MODE_PRIVATE)
-    return prefs.getString("products_sheet_url", DEFAULT_PRODUCTS_SHEET_URL)!!
-}
-
-fun setProductsSheetUrl(context: Context, url: String) {
-    context.getSharedPreferences("config", Context.MODE_PRIVATE)
-        .edit { putString("products_sheet_url", url) }
-}
+//fun getProductsSheetUrl(context: Context): String {
+//    val prefs = context.getSharedPreferences("config", Context.MODE_PRIVATE)
+//    return prefs.getString("products_sheet_url", DEFAULT_PRODUCTS_SHEET_URL)!!
+//}
+//
+//fun setProductsSheetUrl(context: Context, url: String) {
+//    context.getSharedPreferences("config", Context.MODE_PRIVATE)
+//        .edit { putString("products_sheet_url", url) }
+//}
 
 const val DEFAULT_PRODUCTS_SHEET_MAX_TRIES: Int = 3
 
@@ -94,15 +93,15 @@ fun setProductsSheetMaxTries(context: Context, attempts: Int) {
 }
 
 // categories_sheet_url
-fun getCategoriesSheetUrl(context: Context): String {
-    val prefs = context.getSharedPreferences("config", Context.MODE_PRIVATE)
-    return prefs.getString("categories_sheet_url", DEFAULT_CATEGORIES_SHEET_URL)!!
-}
-
-fun setCategoriesSheetUrl(context: Context, url: String) {
-    context.getSharedPreferences("config", Context.MODE_PRIVATE)
-        .edit { putString("categories_sheet_url", url) }
-}
+//fun getCategoriesSheetUrl(context: Context): String {
+//    val prefs = context.getSharedPreferences("config", Context.MODE_PRIVATE)
+//    return prefs.getString("categories_sheet_url", DEFAULT_CATEGORIES_SHEET_URL)!!
+//}
+//
+//fun setCategoriesSheetUrl(context: Context, url: String) {
+//    context.getSharedPreferences("config", Context.MODE_PRIVATE)
+//        .edit { putString("categories_sheet_url", url) }
+//}
 
 // sales_log_url
 fun getSalesLogUrl(context: Context): String {
@@ -116,16 +115,15 @@ fun setSalesLogUrl(context: Context, url: String) {
 }
 
 // location_sheet_url
-
-fun getLocationSheetUrl(context: Context): String {
-    val prefs = context.getSharedPreferences("config", Context.MODE_PRIVATE)
-    return prefs.getString("location_sheet_url", DEFAULT_LOCATION_SHEET_URL)!!
-}
-
-fun setLocationSheetUrl(context: Context, url: String) {
-    context.getSharedPreferences("config", Context.MODE_PRIVATE)
-        .edit { putString("location_sheet_url", url) }
-}
+//fun getLocationSheetUrl(context: Context): String {
+//    val prefs = context.getSharedPreferences("config", Context.MODE_PRIVATE)
+//    return prefs.getString("location_sheet_url", DEFAULT_LOCATION_SHEET_URL)!!
+//}
+//
+//fun setLocationSheetUrl(context: Context, url: String) {
+//    context.getSharedPreferences("config", Context.MODE_PRIVATE)
+//        .edit { putString("location_sheet_url", url) }
+//}
 
 // app_location — the physical store this tablet/install is assigned to.
 // Null means the app hasn't been assigned a location yet (first launch).

@@ -1,6 +1,7 @@
 package com.app.denkenpos
 
 import android.content.Context
+import android.content.res.Configuration
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.core.Animatable
@@ -52,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
@@ -100,6 +102,9 @@ fun LoginScreen(
 ) {
     val context = LocalContext.current
     val loginMessage = stringResource(R.string.loginSuccess)
+
+    val configuration = LocalConfiguration.current
+    val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
 
     var selectedCashier by remember { mutableStateOf<Cashier?>(null) }
     var pinInput by remember { mutableStateOf("") }
@@ -153,12 +158,12 @@ fun LoginScreen(
 
                 // cashier grid
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
+                    columns = GridCells.Fixed(if (isPortrait) 3 else 4),
                     contentPadding = PaddingValues(horizontal = 48.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier
-                        .fillMaxWidth(0.8f)
+                        .fillMaxWidth(if (isPortrait) 0.9f else 0.8f)
                         .align(Alignment.CenterHorizontally)
                 ) {
                     items(cashiers) { cashier ->

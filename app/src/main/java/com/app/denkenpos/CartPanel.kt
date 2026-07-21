@@ -59,13 +59,14 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.delay
 import java.util.Locale
 import kotlin.time.Duration.Companion.milliseconds
 
 data class LastModifiedEvent(val productId: Int, val timeStamp: Long = System.currentTimeMillis())
 
-class CartState {
+class CartState : ViewModel() {
     val cart = mutableStateMapOf<Int, CartItem>()
     val cartOrder = mutableStateListOf<Int>()
     val items by  derivedStateOf { cartOrder.mapNotNull { cart[it] } }

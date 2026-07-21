@@ -22,6 +22,7 @@
     <string name="retry">Retry</string>
     <string name="loggedOut">Logged out</string>
     <string name="refreshProducts">Refresh Products</string>
+    <string name="cartNotEmpty">Cart Not Empty</string>
     <string name="transactionHistory">Transaction History</string>
     <string name="changeLocation">Change Location</string>
     <string name="logout">Logout</string>
@@ -31,6 +32,7 @@
     <string name="fetchingStaffData">Fetching staff data...</string>
     <string name="emptyProductList">Failed to fetch product list from database.</string>
     <string name="refreshProductList">Product list refreshed.</string>
+    <string name="cartNotEmptyMessage">Please clear or complete the current sale before refreshing the product list.</string>
     <string name="selectLocation">Select this tablet\'s location</string>
     <string name="emptyTransactionHistory">Only transactions up to 3 days old are kept here.</string>
     <string name="loadLocationFailed">Couldn\'t load locations.</string>
