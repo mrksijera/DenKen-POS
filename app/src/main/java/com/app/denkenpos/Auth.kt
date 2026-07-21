@@ -62,10 +62,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.edit
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.get
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -181,7 +179,7 @@ fun LoginScreen(
     // pin dialog
     selectedCashier?.let { cashier ->
         var shakeKey by remember{ mutableIntStateOf(0) }
-        log("${selectedCashier?.name} selected, password is ${selectedCashier?.pin}")
+
         PinDialog(
             cashier = cashier,
             pin = pinInput,
@@ -200,14 +198,13 @@ fun LoginScreen(
         LaunchedEffect(pinInput) {
             val cashier = selectedCashier ?: return@LaunchedEffect
 
-            log("current PIN input: $pinInput")
             if (pinInput.length == 6) {
                 if (pinInput == cashier.pin) {
-                    log("login success!")
+                    log("${cashier.name} login success!")
                     Toast.makeText(context, loginMessage, Toast.LENGTH_SHORT).show()
                     onLoginSuccess(cashier)
                 } else {
-                    log("login failed!")
+                    log("${cashier.name} login failed!")
                     pinError = true
                     shakeKey++
                     pinInput = ""
@@ -446,12 +443,12 @@ fun List<String>.indexOfHeader(names: List<String>): Int {
     return indexOfFirst { header -> names.any { it.equals(header.trim(), ignoreCase = true) } }
 }
 
-suspend fun fetchCashiers(url: String): List<Cashier> {
-    val csv: String = httpClient.get(url).body()
-    val lines = csv.lines().filter { it.isNotBlank() }
-    if (lines.isEmpty()) return emptyList()
+suspend fun fetchCashiers(context: Context): List<Cashier> {
+    val table = fetchSheetTable(context, "staff")
+    if (table.isEmpty()) return emptyList()
 
-    val headers = lines.first().split(",")
+    val headers = table.first()
+    val rows = table.drop(1) // drop 1st row (headers)
 
     val idIndex = headers.indexOfHeader(StaffColumns.ID)
     val nameIndex = headers.indexOfHeader(StaffColumns.NAME)
@@ -466,34 +463,21 @@ suspend fun fetchCashiers(url: String): List<Cashier> {
 
     val requiredCount = maxOf(idIndex, nameIndex, locationIndex, pinIndex) + 1
 
-    return lines.drop(1).mapNotNull { line ->
-        val parts = line.split(",")
-
-        if (parts.size >= requiredCount) {
-            val id = parts[idIndex].trim().toDoubleOrNull()?.toInt() ?: return@mapNotNull null
+    return rows.mapNotNull { row ->
+        if (row.size >= requiredCount) {
+            val id = row[idIndex].trim().toDoubleOrNull()?.toInt() ?: return@mapNotNull null
 
             Cashier(
                 id = id,
-                name = parts[nameIndex].trim(),
-                location = parts[locationIndex].trim(),
-                pin = parts[pinIndex].trim()
+                name = row[nameIndex].trim(),
+                location = row[locationIndex].trim(),
+                pin = row[pinIndex].trim()
             )
         } else null
     }
-
-//    return csv.lines().drop(1).mapNotNull { line ->
-//        val parts = line.split(",")
-//
-//        if (parts.size >= 3) {
-//            Cashier(
-//                id = parts[0].toInt(),
-//                name = parts[1],
-//                location = parts[2],
-//                pin = parts[8]
-//            )
-//        } else null
-//    }
 }
+
+// caching
 
 fun saveCashiers(context: Context, cashiers: List<Cashier>) {
     val jsonString = json.encodeToString(cashiers)
@@ -515,6 +499,8 @@ fun loadCashiers(context: Context): List<Cashier> {
         emptyList()
     }
 }
+
+// helper functions
 
 fun nameToGradientColors(name: String): Pair<Color, Color> {
     var hash = 0
