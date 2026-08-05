@@ -10,6 +10,8 @@
     <string name="confirmTransaction">Confirm Transaction</string>
     <string name="transactionComplete">Transaction Complete</string>
     <string name="cartIsEmpty">Cart is Empty</string>
+    <string name="shiftSummary">Shift Summary</string>
+    <string name="inventory">Inventory</string>
 
 <!--    ui text-->
     <string name="settings">Settings</string>
@@ -26,6 +28,9 @@
     <string name="transactionHistory">Transaction History</string>
     <string name="changeLocation">Change Location</string>
     <string name="logout">Logout</string>
+    <string name="shiftSummaryTransactions">Transactions</string>
+    <string name="shiftSummaryTotalSales">Total Sales</string>
+    <string name="uncategorized">Uncategorized</string>
 
     <string name="addItemsPrompt">Add items to the cart before checking out.</string>
     <string name="emptyCashierList">Failed to fetch cashier list from database.</string>
@@ -40,6 +45,12 @@
     <string name="locationChanged">App location changed to </string>
     <string name="transactionSynced">Transaction synced.</string>
     <string name="confirmLogout">Are you sure you want to log out?</string>
+    <string name="shiftSummaryUnavailable">Shift summary is unavailable.</string>
+    <string name="shiftSummaryCashier">Cashier: %s</string>
+    <string name="shiftSummaryLogoutTime">Logged out at %s</string>
+    <string name="lowStock">LOW STOCK</string>
+    <string name="loadInventoryFailed">Failed to load inventory. Check your connection and try again.</string>
+    <string name="emptyInventory">No inventory records for this location.</string>
 
 <!--    content description-->
     <string name="checkoutCart">Go to checkout</string>

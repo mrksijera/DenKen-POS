@@ -84,12 +84,12 @@ fun buildGridItems(products : List<Product>, categoryOrder: List<String> = empty
 
     // Categories sheet order first, then any category present in the products but missing from the sheet tacked on at the end.
     val orderedCategories = categoryOrder.filter { grouped.containsKey(it) } +
-            grouped.keys.filterNot { categoryOrder.contains(it) }
+            grouped.keys.filterNot { categoryOrder.contains(it) }.sorted()
 
     orderedCategories.forEach { category ->
         result.add(ProductGridItem.Header(category))
 
-        grouped[category]?.forEach {
+        grouped[category]?.sortedBy { it.name.lowercase() }?.forEach {
             result.add(ProductGridItem.ProductCard(it))
         }
     }
@@ -151,6 +151,18 @@ fun PosScreen(
     val configuration = LocalConfiguration.current
     val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
 
+    var showInventory by remember { mutableStateOf(false) }
+    if (showInventory) {
+        InventoryScreen(
+            appLocation = appLocation,
+            products = products,
+            categoryOrder = categoryOrder,
+            onBack = { showInventory = false },
+            modifier = modifier.fillMaxSize()
+        )
+        return
+    }
+
     var showCartNotEmptyNotice by remember { mutableStateOf(false) }
 
     val productSection: @Composable (Modifier) -> Unit = { sectionModifier ->
@@ -194,6 +206,7 @@ fun PosScreen(
                             }
                         },
                         onHistory = { },
+                        onInventory = { showInventory = true },
                         currentLocation = appLocation,
                         onChangeLocation = onChangeLocation
                     )

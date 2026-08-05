@@ -34,6 +34,7 @@ fun PosMenuButton(
     onLogout: () -> Unit,
     onRefresh: () -> Unit,
     onHistory: () -> Unit,
+    onInventory: () -> Unit,
     currentLocation: String? = null,
     onChangeLocation: (String) -> Unit = {}
 ) {
@@ -44,6 +45,10 @@ fun PosMenuButton(
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
     var showLocationPicker by remember { mutableStateOf(false) }
+    var showShiftSummary by remember { mutableStateOf(false) }
+    var showShiftSummaryAfterLogout by remember { mutableStateOf(false) }
+    var logoutTimestamp by remember { mutableStateOf<Long?>(null) }
+
 
     Box {
         IconButton(onClick = { expanded = true }) {
@@ -59,6 +64,20 @@ fun PosMenuButton(
             onDismissRequest = { expanded = false }
         ) {
             DropdownMenuItem(
+                text = { Text(stringResource(R.string.shiftSummary)) },
+                leadingIcon = {
+                    Icon(
+                        painter = painterResource(R.drawable.summary),
+                        contentDescription = "Shift Summary"
+                    )
+                },
+                onClick = {
+                    expanded = false
+                    showShiftSummary = true
+                }
+            )
+
+            DropdownMenuItem(
                 text = { Text(stringResource(R.string.transactionHistory)) },
                 leadingIcon = {
                     Icon(
@@ -69,6 +88,20 @@ fun PosMenuButton(
                 onClick = {
                     expanded = false
                     showHistory = true
+                }
+            )
+
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.inventory))},
+                leadingIcon = {
+                    Icon(
+                        painter = painterResource(R.drawable.inventory),
+                        contentDescription = "Inventory"
+                    )
+                },
+                onClick = {
+                    expanded = false
+                    onInventory()
                 }
             )
 
@@ -118,6 +151,15 @@ fun PosMenuButton(
         }
     }
 
+    if (showShiftSummary) {
+        ShiftSummaryDialog(
+            context = context,
+            cashierId = currentCashier?.id,
+            cashierName = currentCashier?.name,
+            onDismiss = { showShiftSummary = false }
+        )
+    }
+
     if (showHistory) {
         TransactionHistoryDialog(
             context = context,
@@ -150,7 +192,8 @@ fun PosMenuButton(
                 ConfirmButton(
                     onClick = {
                         showLogoutConfirm = false
-                        onLogout()
+                        logoutTimestamp = System.currentTimeMillis()
+                        showShiftSummaryAfterLogout = true // deliberate logout: show shift summary first, then finish logging out on dismiss
                     },
                     modifier = Modifier.fillMaxWidth(0.3f)
                 ) { Text("Yes", fontSize = 22.sp) }
@@ -166,6 +209,20 @@ fun PosMenuButton(
                 .padding(vertical = 10.dp)
                 .wrapContentWidth()
                 .wrapContentHeight()
+        )
+    }
+
+    if (showShiftSummaryAfterLogout) {
+        ShiftSummaryDialog(
+            context = context,
+            cashierId = currentCashier?.id,
+            cashierName = currentCashier?.name,
+            logoutTime = logoutTimestamp,
+            onDismiss = {
+                showShiftSummaryAfterLogout = false
+                onLogout()
+            },
+            dismissLabel = stringResource(R.string.logout)
         )
     }
 }

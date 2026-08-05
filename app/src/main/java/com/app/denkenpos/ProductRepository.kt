@@ -7,7 +7,7 @@ private object ProductColumns {
     val ID = listOf("ID")
     val NAME = listOf("Name")
     val CATEGORY = listOf("Category")
-    val PRICE = listOf("Default Price", "Price")
+    val PRICE = listOf("Default Price", "Price", "Selling Price")
     val ACTIVE = listOf("Active")
 }
 
