@@ -16,17 +16,19 @@ private data class SheetTableResponse(
 )
 
 /**
- * Reads a sheet through the same Apps Script Web App already used to log sales
- * [type] must match one of the keys the doGet handler dispatches on (SHEET_NAMES map in AS): "products", "categories", "staff", or "locations".
+ * Reads a sheet in associated google sheet db
+ * [type]: "products", "categories", "staff", "locations", "inventory"
+ * [location]: serverside filter for inventory fetch
  * Returns headers as the first row followed by data rows
  */
-suspend fun fetchSheetTable(context: Context, type: String): List<List<String>> {
+suspend fun fetchSheetTable(context: Context, type: String, location: String? = null): List<List<String>> {
     val url = getSalesLogUrl(context)
     val secret = getSalesLogSecret(context)
 
     val response: SheetTableResponse = httpClient.get(url) {
         parameter("type", type)
         parameter("secret", secret)
+        if (location != null) parameter("location", location)
         timeout { requestTimeoutMillis = 20000 }
     }.body()
 

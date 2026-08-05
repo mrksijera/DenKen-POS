@@ -19,3 +19,29 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# kotlinx.serialization
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+-keepclassmembers class kotlinx.serialization.json.** {
+    *** Companion;
+}
+-keepclasseswithmembers class kotlinx.serialization.json.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keep,includedescriptorclasses class com.app.denkenpos.**$$serializer { *; }
+-keepclassmembers class com.app.denkenpos.** {
+    *** Companion;
+}
+-keepclasseswithmembers class com.app.denkenpos.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# Ktor (CIO engine)
+-keep class io.ktor.** { *; }
+-keep class kotlinx.coroutines.** { *; }
+-dontwarn io.ktor.**
+-dontwarn kotlinx.coroutines.**
+
+# WorkManager
+-keep class androidx.work.impl.background.systemjob.SystemJobService

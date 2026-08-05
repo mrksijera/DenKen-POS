@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.core.content.edit
 
 // urls
-//const val DEFAULT_VALUES_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=1590247624&single=true&output=csv"
+const val DEFAULT_VALUES_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=1590247624&single=true&output=csv"
 //const val DEFAULT_STAFF_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=332829102&single=true&output=csv"
 //const val DEFAULT_LOCATION_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=892986798&single=true&output=csv"
 //const val DEFAULT_CATEGORIES_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCvdEKNc1PpZHe2WfXpqJtnYiDOtPo5P1diRY2fnn2QJMppQj2Ui99OalzX-CJQqTC7DjiIrFGDIH_/pub?gid=1166628975&single=true&output=csv"
@@ -27,7 +27,7 @@ fun setAdminId(context: Context, adminId: Int) {
 }
 
 // timeout_minutes
-const val DEFAULT_TIMEOUT_MINUTES: Long = 15
+const val DEFAULT_TIMEOUT_MINUTES: Long = 30
 
 fun getTimeoutMinutes(context: Context): Long {
     val prefs = context.getSharedPreferences("config", Context.MODE_PRIVATE)
@@ -153,4 +153,30 @@ fun getSalesLogSecret(context: Context): String {
 fun setSalesLogSecret(context: Context, secret: String) {
     context.getSharedPreferences("config", Context.MODE_PRIVATE)
         .edit { putString("sales_log_secret", secret) }
+}
+
+// business day cutoff
+const val DEFAULT_SHIFT_CUTOFF_HOUR: Int = 4
+
+fun getShiftCutoffHour(context: Context): Int {
+    val prefs = context.getSharedPreferences("config", Context.MODE_PRIVATE)
+    return prefs.getInt("shift_cutoff_hour", DEFAULT_SHIFT_CUTOFF_HOUR)
+}
+
+fun setShiftCutoffHour(context: Context, hour: Int) {
+    context.getSharedPreferences("config", Context.MODE_PRIVATE)
+        .edit { putInt("shift_cutoff_hour", hour) }
+}
+
+// low_stock_threshold — fallback used when the Inventory sheet has no per-item threshold column
+const val DEFAULT_LOW_STOCK_THRESHOLD: Int = 25
+
+fun getLowStockThreshold(context: Context): Int {
+    val prefs = context.getSharedPreferences("config", Context.MODE_PRIVATE)
+    return prefs.getInt("low_stock_threshold", DEFAULT_LOW_STOCK_THRESHOLD)
+}
+
+fun setLowStockThreshold(context: Context, threshold: Int) {
+    context.getSharedPreferences("config", Context.MODE_PRIVATE)
+        .edit { putInt("low_stock_threshold", threshold) }
 }

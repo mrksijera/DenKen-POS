@@ -64,6 +64,7 @@ import io.ktor.http.isSuccess
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
@@ -597,4 +598,177 @@ fun StatusBadge(
         fontStyle = FontStyle.Italic,
         textAlign = TextAlign.End
     )
+}
+
+// Shift summary
+
+// bucket timestamps into a "business day" key (yyyy-MM-dd) rather than the literal calendar date,
+// so a shift that crosses midnight (e.g. 6 PM-2 AM) is treated as one day
+fun businessDateKey(timestamp: Long, cutoffHour: Int): String {
+    val calendar = Calendar.getInstance()
+    calendar.timeInMillis = timestamp
+
+    if (calendar.get(Calendar.HOUR_OF_DAY) < cutoffHour) {
+        calendar.add(Calendar.DAY_OF_YEAR, -1)
+    }
+
+    return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)
+}
+
+data class ShiftSummary(
+    val businessDate: String,
+    val transactionCount: Int,
+    val totalSales: Double
+)
+
+// aggregates current cashier's summary for today from local transaction history regardless of sync status
+fun computeShiftSummary(context: Context, cashierId: Int): ShiftSummary {
+    val cutoffHour = getShiftCutoffHour(context)
+    val today = businessDateKey(System.currentTimeMillis(), cutoffHour)
+
+    val matching = loadTransactionHistory(context).filter { record ->
+        record.transaction.cashierId == cashierId &&
+                businessDateKey(record.transaction.timestamp, cutoffHour) == today
+    }
+
+    return ShiftSummary(
+        businessDate = today,
+        transactionCount = matching.size,
+        totalSales = matching.sumOf { it.transaction.total }
+    )
+}
+
+private val shiftSummaryDateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+private val shiftSummaryTimeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+
+@Composable
+fun ShiftSummaryDialog(
+    context: Context,
+    cashierId: Int?,
+    cashierName: String?,
+    onDismiss: () -> Unit,
+    dismissLabel: String = stringResource(R.string.confirm),
+    logoutTime: Long? = null // set only when shown as part of the deliberate-logout flow
+) {
+    val summary = remember(cashierId) {
+        cashierId?.let { computeShiftSummary(context, it) }
+    }
+
+    val configuration = LocalConfiguration.current
+    val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth(if (isPortrait) 0.92f else 0.7f)
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                if (summary != null) {
+                    val dateLabel = remember(summary.businessDate) {
+                        try {
+                            val parsed = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                                .parse(summary.businessDate)
+                            if (parsed != null) shiftSummaryDateFormat.format(parsed) else summary.businessDate
+                        } catch (e: Exception) {
+                            summary.businessDate
+                        }
+                    }
+
+                    Text(
+                        text = stringResource(R.string.shiftSummary) + " (" + dateLabel + ")",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp,
+                        textAlign = TextAlign.Center
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.shiftSummary),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                Spacer(Modifier.height(4.dp))
+
+                if (!cashierName.isNullOrBlank()) {
+                    Text(
+                        text = String.format(stringResource(R.string.shiftSummaryCashier), cashierName),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                if (logoutTime != null) {
+                    Text(
+                        text = String.format(
+                            stringResource(R.string.shiftSummaryLogoutTime),
+                            shiftSummaryTimeFormat.format(Date(logoutTime))
+                        ),
+                        fontSize = 16.sp
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                if (summary == null) {
+                    Text(
+                        text = stringResource(R.string.shiftSummaryUnavailable),
+                        fontSize = 16.sp
+                    )
+                } else {
+                    ShiftSummaryRow(
+                        label = stringResource(R.string.shiftSummaryTransactions),
+                        value = summary.transactionCount.toString()
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    HorizontalDivider()
+                    Spacer(Modifier.height(10.dp))
+                    ShiftSummaryRow(
+                        label = stringResource(R.string.shiftSummaryTotalSales),
+                        value = String.format(
+                            Locale.getDefault(),
+                            "${stringResource(R.string.currency)} %.2f",
+                            summary.totalSales
+                        ),
+                        emphasize = true
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                ConfirmButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = dismissLabel, fontSize = 20.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShiftSummaryRow(
+    label: String,
+    value: String,
+    emphasize: Boolean = false
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = label,
+            fontSize = if (emphasize) 20.sp else 18.sp,
+            fontWeight = if (emphasize) FontWeight.Bold else FontWeight.Normal,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = value,
+            fontSize = if (emphasize) 22.sp else 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black
+        )
+    }
 }
