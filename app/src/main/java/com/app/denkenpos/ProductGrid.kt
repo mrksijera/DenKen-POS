@@ -448,10 +448,7 @@ fun ProductCard(
                 maxLines = 1
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(String.format(
-                Locale.getDefault(),
-                "%s %.2f",
-                stringResource(R.string.currency), product.price)
+            Text(String.format(stringResource(R.string.currency), product.price)
             )
         }
     }

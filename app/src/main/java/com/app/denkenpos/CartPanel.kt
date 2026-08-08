@@ -3,13 +3,17 @@ package com.app.denkenpos
 import android.content.res.Configuration
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,6 +37,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -330,66 +335,73 @@ fun CartPanel(
     }
 
     pendingTransaction?.let { transaction ->
+        var amountInput by remember(transaction.id) { mutableStateOf("") }
+        val amountPaid = amountInput.toDoubleOrNull() ?: 0.0
+        val sufficientPayment = amountPaid >= transaction.total
+
         AlertDialog(
             onDismissRequest = { pendingTransaction = null }, // acts as "Back"
             properties = DialogProperties(usePlatformDefaultWidth = false),
             title = { Text(
                 stringResource(R.string.confirmTransaction),
-                fontSize = 20.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             ) },
             text = {
                 Column {
                     Text("Cashier: ${transaction.cashierName}", fontSize = 20.sp)
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(4.dp))
                     HorizontalDivider()
                     Spacer(Modifier.height(8.dp))
 
-                    LazyColumn(
-                        // More vertical room is available in portrait, so let the item list use it
-                        // instead of staying capped at a landscape-sized 360dp.
-                        modifier = Modifier.heightIn(max = if (isPortrait) (configuration.screenHeightDp * 0.4f).dp else 360.dp)
-                    ) {
-                        items(transaction.items, key = { it.productId }) { item ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = "${item.quantity}x ${item.name}",
-                                    fontSize = 18.sp,
+                    if (isPortrait) {
+                        // stacked: item -> total -> calculator
+                        TransactionItemsList(
+                            transactionItems = transaction.items,
+                            modifier = Modifier.heightIn(max = (configuration.screenHeightDp * 0.32f).dp)
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+                        HorizontalDivider()
+                        Spacer(Modifier.height(12.dp))
+
+                        TransactionTotalRow(transaction.total)
+
+                        CashCalculatorSection(
+                            total = transaction.total,
+                            amountInput = amountInput,
+                            onKeyPress = { key -> amountInput = applyCalculatorKey(amountInput, key) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        // side by side: items+total -> calculator
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.weight(0.45f)) {
+                                TransactionItemsList(
+                                    transactionItems = transaction.items,
                                     modifier = Modifier.weight(1f)
                                 )
-                                Text(
-                                    text = String.format(Locale.getDefault(), "%.2f", item.lineTotal),
-                                    fontSize = 18.sp
+
+                                Spacer(Modifier.height(8.dp))
+                                HorizontalDivider()
+                                Spacer(Modifier.height(12.dp))
+
+                                TransactionTotalRow(transaction.total)
+                            }
+
+                            VerticalDivider(modifier = Modifier.padding(horizontal = 14.dp))
+
+                            Column(modifier = Modifier.weight(0.55f)) {
+                                CashCalculatorSection(
+                                    total = transaction.total,
+                                    amountInput = amountInput,
+                                    onKeyPress = { key -> amountInput = applyCalculatorKey(amountInput, key) },
+                                    showTopDivider = false,
+                                    compactNumpad = true,
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                             }
                         }
-                    }
-
-                    Spacer(Modifier.height(8.dp))
-                    HorizontalDivider()
-                    Spacer(Modifier.height(12.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "Total",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text( // 4
-                            text = "${stringResource(R.string.currency)} " +
-                                    String.format(Locale.getDefault(), "%.2f", transaction.total),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 32.sp,
-                            color = colorResource(R.color.Confirm)
-                        )
                     }
                 }
             },
@@ -399,20 +411,74 @@ fun CartPanel(
                         onConfirmTransaction(transaction)
                         pendingTransaction = null
                     },
-                    modifier = Modifier.fillMaxWidth(if (isPortrait) 0.4f else 0.3f)
+                    modifier = Modifier
+                        .fillMaxWidth(if (isPortrait) 0.49f else .54f)
+                        .height(64.dp)
                 ) { Text(stringResource(R.string.confirm), fontSize = 26.sp) }
             },
             dismissButton = {
                 CancelButton(
                     onClick = { pendingTransaction = null },
-                    modifier = Modifier.fillMaxWidth(if (isPortrait) 0.4f else 0.3f)
+                    modifier = Modifier
+                        .fillMaxWidth(if (isPortrait) 0.49f else 0.44f)
+                        .height(64.dp)
                 ) { Text(stringResource(R.string.cancel), fontSize = 26.sp) }
             },
             shape = RoundedCornerShape(8.dp),
             modifier = Modifier
                 .padding(vertical = 10.dp)
-                .fillMaxWidth(if (isPortrait) 0.92f else 0.55f)
-                .wrapContentHeight()
+                .fillMaxWidth(if (isPortrait) 0.92f else 0.85f)
+                .then(
+                    if (isPortrait) Modifier.wrapContentHeight()
+                    else Modifier.heightIn(max = (configuration.screenHeightDp * 0.92).dp)
+                )
+        )
+    }
+}
+
+@Composable
+private fun TransactionItemsList(
+    transactionItems: List<TransactionItem>,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(modifier = modifier) {
+        items(transactionItems, key = { it.productId }) { item ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            ) {
+                Text(
+                    text = "${item.quantity}x ${item.name}",
+                    fontSize = 18.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = String.format(stringResource(R.string.currencyAmt), item.lineTotal),
+                    fontSize = 18.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TransactionTotalRow(total: Double) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = "Total",
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = String.format(stringResource(R.string.currency), total),
+            fontWeight = FontWeight.Bold,
+            fontSize = 32.sp,
+            color = colorResource(R.color.Confirm)
         )
     }
 }
@@ -491,11 +557,7 @@ fun CartItemRow(
         }
 
         Text(
-            text = String.format(
-                Locale.getDefault(),
-                "%s %.2f",
-                stringResource(R.string.currency), item.product.price * item.quantity
-            ),
+            text = String.format(stringResource(R.string.currency), item.product.price * item.quantity),
             textAlign = TextAlign.End,
             fontSize = 22.sp,
             modifier = Modifier.weight(0.3f)
@@ -530,14 +592,14 @@ fun CartPanelBottom(
         )
 
         Text(
-            text = stringResource(R.string.currency),
+            text = stringResource(R.string.currencyNoAmt),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(0.1f)
         )
 
         Text(
-            text = String.format(Locale.getDefault(), "%.2f", total),
+            text = String.format(stringResource(R.string.currencyAmt), total),
             textAlign = TextAlign.End,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
@@ -554,7 +616,6 @@ fun CartPanelBottom(
     ) {
         CancelButton(
             onClick = onClear,
-            enabled = hasItems,
             modifier = Modifier
                 .padding(5.dp)
                 .weight(0.3f)
@@ -569,7 +630,6 @@ fun CartPanelBottom(
 
         ConfirmButton(
             onClick = onCheckout,
-            enabled = hasItems,
             modifier = Modifier
                 .padding(5.dp)
                 .weight(0.7f)
@@ -648,4 +708,156 @@ fun EditQuantityDialog(
             .fillMaxWidth(0.6f)
             .wrapContentHeight()
     )
+}
+// Cash calculator
+fun applyCalculatorKey(current: String, key: String): String {
+    return when (key) {
+        "⌫" -> if (current.isNotEmpty()) current.dropLast(1) else current
+
+        "." -> when {
+            current.contains(".") -> current
+            current.isEmpty() -> "0."
+            else -> "$current."
+        }
+
+        else -> {
+            val dotIndex = current.indexOf(".")
+
+            if (dotIndex != -1) {
+                val decimals = current.length - dotIndex - 1
+                if (decimals >= 2) current else current + key
+            } else {
+                val base = if (current == "0") "" else current
+                if (base.length >= 7) current else base + key
+            }
+        }
+    }
+}
+
+@Composable
+fun CashCalculatorSection(
+    total: Double,
+    amountInput: String,
+    onKeyPress: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    showTopDivider: Boolean = true,
+    compactNumpad: Boolean = false
+) {
+    val amountPaid = amountInput.toDoubleOrNull() ?: 0.0
+    val sufficient = amountPaid >= total
+    val change = amountPaid - total
+
+    Column(
+        horizontalAlignment = if (compactNumpad) Alignment.CenterHorizontally else Alignment.Start,
+        modifier = modifier
+    ) {
+        if (showTopDivider) {
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(12.dp))
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = stringResource(R.string.amountPaid),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = "${stringResource(R.string.currencyNoAmt)} " + (if (amountInput.isEmpty()) "0.00" else amountInput),
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(Modifier.height(4.dp))
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = if (sufficient) stringResource(R.string.change) else stringResource(R.string.deficit),
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = String.format(stringResource(R.string.currency), change),
+                fontWeight = FontWeight.Bold,
+                fontSize = 26.sp,
+                color = if (sufficient) colorResource(R.color.Confirm) else colorResource(R.color.Cancel)
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        CalculatorNumpad(
+            onKeyPress = onKeyPress,
+            compact = compactNumpad,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+fun CalculatorNumpad(
+    onKeyPress: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
+) {
+    val rows = listOf(
+        listOf("1", "2", "3"),
+        listOf("4", "5", "6"),
+        listOf("7", "8", "9"),
+        listOf(".", "0", "⌫")
+    )
+
+    val spacing = if (compact) 6.dp else 8.dp
+    val aspect = if (compact) 2.2f else 2.2f
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(spacing),
+        modifier = modifier.fillMaxWidth(if (compact) 0.8f else 1f)
+    ) {
+        rows.forEach { row ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(spacing),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                row.forEach { key ->
+                    val isBackspace = key == "⌫"
+
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .weight(1f)
+                            .aspectRatio(aspect)
+                            .background(
+                                color = if (isBackspace) colorResource(R.color.slateGray)
+                                else colorResource(R.color.lightBlueGray),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .clickable { onKeyPress(key) }
+                            .border(
+                                width = 1.dp,
+                                color = Color.LightGray,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                    ) {
+                        Text(
+                            text = key,
+                            color = if (isBackspace) Color.White else colorResource(R.color.darkNavy),
+                            fontSize = if (compact) 26.sp else 32.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
+    }
 }

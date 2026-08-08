@@ -236,6 +236,7 @@ fun ConfirmButton(
 ) {
     Button(
         onClick = onClick,
+        enabled = enabled,
         colors = ButtonColors(
             containerColor = colorResource(R.color.Confirm),
             contentColor = Color.White,
@@ -258,6 +259,7 @@ fun CancelButton(
 ) {
     Button(
         onClick = onClick,
+        enabled = enabled,
         colors = ButtonColors(
             containerColor = colorResource(R.color.Cancel),
             contentColor = Color.White,
