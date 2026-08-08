@@ -451,7 +451,7 @@ fun TransactionHistoryRow(
                 )
 
                 Text(
-                    text = String.format(Locale.getDefault(), "${stringResource(R.string.currency)} %.2f", transaction.total),
+                    text = String.format(stringResource(R.string.currency), transaction.total),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.End
@@ -517,7 +517,7 @@ fun TransactionHistoryRow(
                 )
 
                 Text(
-                    text = String.format(Locale.getDefault(), "${stringResource(R.string.currency)} %.2f", transaction.total),
+                    text = String.format(stringResource(R.string.currency), transaction.total),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.End
@@ -726,11 +726,7 @@ fun ShiftSummaryDialog(
                     Spacer(Modifier.height(10.dp))
                     ShiftSummaryRow(
                         label = stringResource(R.string.shiftSummaryTotalSales),
-                        value = String.format(
-                            Locale.getDefault(),
-                            "${stringResource(R.string.currency)} %.2f",
-                            summary.totalSales
-                        ),
+                        value = String.format(stringResource(R.string.currency), summary.totalSales),
                         emphasize = true
                     )
                 }

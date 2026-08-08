@@ -1,7 +1,9 @@
 <resources>
     <string name="app_name">DenKen POS</string>
 
-    <string name="currency">Php</string>
+    <string name="currency">Php %.2f</string>
+    <string name="currencyAmt">%.2f</string>
+    <string name="currencyNoAmt">Php</string>
 
 <!--    dialog text-->
     <string name="setQuantity">Set Quantity</string>
@@ -31,6 +33,9 @@
     <string name="shiftSummaryTransactions">Transactions</string>
     <string name="shiftSummaryTotalSales">Total Sales</string>
     <string name="uncategorized">Uncategorized</string>
+    <string name="amountPaid">Amount Paid</string>
+    <string name="change">Change</string>
+    <string name="deficit">Deficit</string>
 
     <string name="addItemsPrompt">Add items to the cart before checking out.</string>
     <string name="emptyCashierList">Failed to fetch cashier list from database.</string>
