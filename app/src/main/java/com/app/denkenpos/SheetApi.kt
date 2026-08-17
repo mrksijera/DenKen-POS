@@ -15,12 +15,9 @@ private data class SheetTableResponse(
     val error: String? = null
 )
 
-/**
- * Reads a sheet in associated google sheet db
- * [type]: "products", "categories", "staff", "locations", "inventory"
- * [location]: serverside filter for inventory fetch
- * Returns headers as the first row followed by data rows
- */
+// reads a sheet in associated google sheet db
+// type - "products", "categories", "staff", "locations", "inventory"
+// location - serverside filter for inventory fetch
 suspend fun fetchSheetTable(context: Context, type: String, location: String? = null): List<List<String>> {
     val url = getSalesLogUrl(context)
     val secret = getSalesLogSecret(context)
@@ -29,6 +26,7 @@ suspend fun fetchSheetTable(context: Context, type: String, location: String? = 
         parameter("type", type)
         parameter("secret", secret)
         if (location != null) parameter("location", location)
+        if (location != null) log("fetching sheet with location $location")
         timeout { requestTimeoutMillis = 20000 }
     }.body()
 
