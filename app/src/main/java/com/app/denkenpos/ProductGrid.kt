@@ -208,7 +208,10 @@ fun PosScreen(
                         onHistory = { },
                         onInventory = { showInventory = true },
                         currentLocation = appLocation,
-                        onChangeLocation = onChangeLocation
+                        onChangeLocation = { newLocation ->
+                            cart.clear()
+                            onChangeLocation(newLocation)
+                        }
                     )
                 }
             }

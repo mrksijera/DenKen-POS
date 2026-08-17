@@ -100,7 +100,7 @@ class RootViewModel(application: Application): AndroidViewModel(application) {
                 log("fetching products attempt $attempt of $maxAttempts")
 
                 fetchedProducts = try {
-                    fetchProducts(context)
+                    fetchProducts(context, appLocation)
                 } catch (_: Exception) {
                     log("fetch products attempt $attempt failed")
                     if (attempt < maxAttempts) delay(2000L.milliseconds)
@@ -118,10 +118,10 @@ class RootViewModel(application: Application): AndroidViewModel(application) {
             if (!fetchedProducts.isNullOrEmpty()) {
                 products.clear()
                 products.addAll(fetchedProducts)
-                saveProducts(context, fetchedProducts)
+                saveProducts(context, fetchedProducts, appLocation)
                 log("fetched ${fetchedProducts.size} products from masterlist")
             } else {
-                val cached = loadProducts(context)
+                val cached = loadProducts(context, appLocation)
                 products.clear()
                 products.addAll(cached)
                 log("product fetch failed, fallback to cached data with ${products.count()} products")
@@ -148,6 +148,7 @@ class RootViewModel(application: Application): AndroidViewModel(application) {
         setAppLocation(context, location)
         appLocation = location
         loadCashiersForLocation()
+        loadProductCatalog() // refetch product catalog
     }
 
     private fun loadCashiersForLocation() {

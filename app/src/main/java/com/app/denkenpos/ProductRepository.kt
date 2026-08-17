@@ -15,10 +15,9 @@ private object CategoryColumns {
     val NAME = listOf("Name")
 }
 
-// ---- Fetching ----
-
-suspend fun fetchProducts(context: Context): List<Product> {
-    val table = fetchSheetTable(context, "products")
+// fetching
+suspend fun fetchProducts(context: Context, location: String? = null): List<Product> {
+    val table = fetchSheetTable(context, "products", location = location)
     if (table.isEmpty()) return emptyList()
 
     val headers = table.first()
@@ -83,16 +82,21 @@ suspend fun fetchCategories(context: Context): List<String> {
 
 // caching
 
-fun saveProducts(context: Context, products: List<Product>) {
+// products are now location-dependent, so the cache is keyed per location to avoid an offline fallback showing a different branch's product list
+private fun productsCacheKey(location: String?): String {
+    return if (location.isNullOrBlank()) "products" else "products_${location.trim().lowercase()}"
+}
+
+fun saveProducts(context: Context, products: List<Product>, location: String? = null) {
     val jsonString = json.encodeToString(products)
 
     context.getSharedPreferences("pos", Context.MODE_PRIVATE)
-        .edit { putString("products", jsonString) }
+        .edit { putString(productsCacheKey(location), jsonString) }
 }
 
-fun loadProducts(context: Context): List<Product> {
+fun loadProducts(context: Context, location: String? = null): List<Product> {
     val jsonString = context.getSharedPreferences("pos", Context.MODE_PRIVATE)
-        .getString("products", null) ?: return emptyList()
+        .getString(productsCacheKey(location), null) ?: return emptyList()
 
     return try {
         json.decodeFromString<List<Product>>(jsonString)
